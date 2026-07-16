@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   Radar,
@@ -12,27 +13,27 @@ import {
   ShieldHalf,
   Settings,
   X,
+  Crosshair,
+  BadgeCheck,
+  LineChart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const nav = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "threat-center", label: "Threat Center", icon: Radar },
-  { id: "security-testing", label: "Security Testing", icon: Bug },
-  { id: "health", label: "Health Monitor", icon: HeartPulse },
-  { id: "threat-intel", label: "Threat Intel", icon: Globe2 },
-  { id: "reports", label: "Reports", icon: FileBarChart },
-  { id: "assistant", label: "AI Assistant", icon: Bot },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/threats", label: "Threat Center", icon: Radar },
+  { href: "/dashboard/testing", label: "Security Testing", icon: Bug },
+  { href: "/dashboard/hunting", label: "Threat Hunting", icon: Crosshair },
+  { href: "/dashboard/health", label: "Health Monitor", icon: HeartPulse },
+  { href: "/dashboard/intel", label: "Threat Intel", icon: Globe2 },
+  { href: "/dashboard/executive", label: "Executive", icon: LineChart },
+  { href: "/dashboard/compliance", label: "Compliance", icon: BadgeCheck },
+  { href: "/dashboard/reports", label: "Reports", icon: FileBarChart },
+  { href: "/dashboard/assistant", label: "AI Assistant", icon: Bot },
 ]
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [active, setActive] = useState("overview")
-
-  const handleClick = (id: string) => {
-    setActive(id)
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
-    onClose()
-  }
+  const pathname = usePathname()
 
   return (
     <>
@@ -50,7 +51,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         )}
       >
         <div className="flex items-center justify-between gap-2 border-b border-sidebar-border px-5 py-4">
-          <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/15 text-primary glow-primary">
               <ShieldHalf className="h-5 w-5" />
             </div>
@@ -60,7 +61,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               </p>
               <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">AI-SOC</p>
             </div>
-          </div>
+          </Link>
           <button
             className="rounded p-1 text-muted-foreground hover:text-foreground lg:hidden"
             onClick={onClose}
@@ -73,11 +74,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {nav.map((item) => {
             const Icon = item.icon
-            const isActive = active === item.id
+            const isActive =
+              item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)
             return (
-              <button
-                key={item.id}
-                onClick={() => handleClick(item.id)}
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
                   isActive
@@ -88,16 +91,20 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 <Icon className={cn("h-4 w-4", isActive && "text-primary")} />
                 <span className="font-medium">{item.label}</span>
                 {isActive && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
-              </button>
+              </Link>
             )
           })}
         </nav>
 
         <div className="border-t border-sidebar-border p-3">
-          <button className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-foreground">
+          <Link
+            href="/dashboard/settings"
+            onClick={onClose}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-foreground"
+          >
             <Settings className="h-4 w-4" />
             <span className="font-medium">Settings</span>
-          </button>
+          </Link>
           <div className="mt-3 flex items-center gap-3 rounded-md bg-sidebar-accent/40 px-3 py-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 font-mono text-xs font-bold text-primary">
               AZ
