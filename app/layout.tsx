@@ -1,16 +1,29 @@
-import { Analytics } from '@vercel/analytics/next'
-import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import './globals.css'
+import { AuthProvider } from "@/lib/auth-session";
+import { QueryProvider } from "@/components/providers/query-provider";
+import { Toaster } from "sonner";
+import { Analytics } from '@vercel/analytics/next';
+import type { Metadata, Viewport } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
 
-const geistSans = Geist({ subsets: ['latin'], variable: '--font-sans' })
-const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' })
+const geistSans = Geist({ subsets: ['latin'], variable: '--font-sans' });
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
+// Enhanced cyber-themed metadata matching your previous configurations
 export const metadata: Metadata = {
-  title: 'BLVCK CYBER — AI-SOC Security Dashboard',
+  title: 'BLVCK CYBER — AI Cybersecurity for Africa',
   description:
-    'AI-powered Security Operations Center for African organizations. Real-time threat detection, vulnerability management, and continuous security monitoring.',
+    'AI-powered SOC, threat intelligence, and compliance built for African organizations. Detect, investigate, and respond in seconds.',
   generator: 'v0.app',
+  authors: [{ name: "BLVCK One" }],
+  openGraph: {
+    title: 'BLVCK CYBER — AI Cybersecurity for Africa',
+    description: 'AI-powered SOC, threat intel and compliance built for African organizations.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
   icons: {
     icon: [
       {
@@ -28,24 +41,35 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
-}
+};
 
 export const viewport: Viewport = {
   colorScheme: 'dark',
-  themeColor: '#0a0f0c',
-}
+  themeColor: '#00d4ff', // Matches the grid color configuration
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable}`}>
-      <body className="bg-background font-sans antialiased">
-        {children}
+    <html 
+      lang="en" 
+      className={`dark ${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning // Prevents browser extension warning clashes
+    >
+      <body className="bg-[#0a0f0c] text-foreground font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+        <AuthProvider>
+          <QueryProvider>
+            {children}
+            
+            {/* Dark themed toaster alert notification module global configuration */}
+            <Toaster theme="dark" position="top-right" closeButton richColors />
+          </QueryProvider>
+        </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
-  )
+  );
 }

@@ -1,0 +1,282 @@
+============================
+APP
+============================
+Folder PATH listing for volume Windows
+Volume serial number is 00000209 4402:6942
+C:\USERS\BMAKO\DESKTOP\BLVCK-CYBER-ULTRA\APP
+¦   globals.css
+¦   layout.tsx
+¦   page.tsx
+¦   
++---admin
+¦   ¦   layout.tsx
+¦   ¦   page.tsx
+¦   ¦   
+¦   +---growth
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---leads
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---partners
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---revenue
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---subscribers
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---subscription-health
+¦           page.tsx
+¦           
++---app
+¦       page.tsx
+¦       
++---bug-bounty
+¦       page.tsx
+¦       
++---dashboard
+¦   ¦   layout.tsx
+¦   ¦   page.tsx
+¦   ¦   
+¦   +---[tenantId]
+¦       ¦   layout.tsx
+¦       ¦   
+¦       +---academy
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---alerts
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---assets
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---compliance
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---forensics
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---hunting
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---insurance
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---integrations
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---mobile
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---reports
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---settings
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---soc-demo
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---team
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---tenants
+¦       ¦       page.tsx
+¦       ¦       
+¦       +---threat-intel
+¦               page.tsx
+¦               
++---demo
+¦       page.tsx
+¦       
++---login
+¦       login-client.tsx
+¦       page.tsx
+¦       
++---logout
+¦       route.ts
+¦       
++---test
+        page.tsx
+        
+
+============================
+COMPONENTS
+============================
+Folder PATH listing for volume Windows
+Volume serial number is 00000174 4402:6942
+C:\USERS\BMAKO\DESKTOP\BLVCK-CYBER-ULTRA\COMPONENTS
+¦   AfricaMap.tsx
+¦   particle-field.tsx
+¦   SeverityBadge.tsx
+¦   stat-card.tsx
+¦   
++---admin
+¦       admin-nav.tsx
+¦       ai-growth-prediction.tsx
+¦       lead-management.tsx
+¦       sales-dashboard.tsx
+¦       subscriber-detail.tsx
+¦       subscriber-management.tsx
+¦       
++---auth
+¦       auth-shell.tsx
+¦       password-input.tsx
+¦       
++---dashboard
+¦   +---academy
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---alerts
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---assets
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---bug-bounty
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---compliance
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---demo
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---forensics
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---hunting
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---insurance
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---integrations
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---mobile
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---reports
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---settings
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---shared
+¦   ¦       ui.tsx
+¦   ¦       
+¦   +---team
+¦   ¦       module.tsx
+¦   ¦       
+¦   +---tenants
+¦           module.tsx
+¦           
++---providers
+¦       query-provider.tsx
+¦       tenant-provider.tsx
+¦       
++---shell
+¦       overview-charts.tsx
+¦       page-header.tsx
+¦       stat-card.tsx
+¦       
++---shield
+¦       regional-intelligence.tsx
+¦       
++---soc
+¦       ai-assistant.tsx
+¦       ai-status.tsx
+¦       alerts-panel.tsx
+¦       attack-chart.tsx
+¦       dashboard.tsx
+¦       detection-animation.tsx
+¦       glass-card.tsx
+¦       health-monitor.tsx
+¦       incident-report.tsx
+¦       panel.tsx
+¦       reports-panel.tsx
+¦       security-score.tsx
+¦       severity.tsx
+¦       shell.tsx
+¦       sidebar-user.tsx
+¦       sidebar.tsx
+¦       simulator.tsx
+¦       stat-cards.tsx
+¦       threat-feed.tsx
+¦       threat-intel.tsx
+¦       topbar.tsx
+¦       vulnerabilities.tsx
+¦       
++---threat-intel
+¦       category-chart.tsx
+¦       live-feed.tsx
+¦       react-19-simple-maps.d.ts
+¦       severity-badge.tsx
+¦       severity-chart.tsx
+¦       sources-table.tsx
+¦       threat-charts.tsx
+¦       threat-intel-view.tsx
+¦       threat-map.tsx
+¦       timeline-chart.tsx
+¦       
++---ui
+        alert.tsx
+        avatar.tsx
+        badge.tsx
+        button.tsx
+        card.tsx
+        chart.tsx
+        checkbox.tsx
+        dialog.tsx
+        dropdown-menu.tsx
+        field.tsx
+        input.tsx
+        label.tsx
+        progress.tsx
+        scroll-area.tsx
+        select.tsx
+        separator.tsx
+        sheet.tsx
+        skeleton.tsx
+        sonner.tsx
+        switch.tsx
+        table.tsx
+        tabs.tsx
+        textarea.tsx
+        tooltip.tsx
+        
+
+============================
+LIB
+============================
+Folder PATH listing for volume Windows
+Volume serial number is 0000018F 4402:6942
+C:\USERS\BMAKO\DESKTOP\BLVCK-CYBER-ULTRA\LIB
+¦   admin-nav.ts
+¦   analytics.ts
+¦   auth-session.tsx
+¦   generate-incident-pdf.ts
+¦   mock-data.ts
+¦   nav.ts
+¦   sales.ts
+¦   soc-data.ts
+¦   soc-scenarios.ts
+¦   subscribers.ts
+¦   threat-data.ts
+¦   utils.ts
+¦   
++---api
+¦       auth.ts
+¦       tenants.ts
+¦       
++---auth
+¦       keycloak.ts
+¦       pkce.ts
+¦       session.ts
+¦       
++---dashboard
+        data.ts
+        
