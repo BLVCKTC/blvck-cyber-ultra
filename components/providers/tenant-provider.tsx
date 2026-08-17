@@ -4,6 +4,16 @@ import { createContext, useContext, type ReactNode } from 'react'
 
 export type TenantPermissions = string[]
 
+export type TenantMembership = {
+  id: string
+
+  tenant_id: string
+
+  tenant_name: string
+
+  role: string
+}
+
 export type TenantContextValue = {
   tenantId: string
 
@@ -14,6 +24,15 @@ export type TenantContextValue = {
   role: string
 
   permissions: TenantPermissions
+
+  /**
+   * All tenants the authenticated user belongs to.
+   *
+   * Sourced from the server-side layout (`/auth/me`) so the client never
+   * makes a second request. This is presentation/navigation data only — the
+   * server remains the authorization authority for the active tenant.
+   */
+  memberships: TenantMembership[]
 }
 
 const TenantContext = createContext<TenantContextValue | null>(null)
