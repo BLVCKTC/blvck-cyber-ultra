@@ -58,18 +58,30 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  const tenantMemberships = (memberships ?? []).map((m: any) => ({
+    id: String(m.id ?? m.tenant_id),
+
+    tenant_id: m.tenant_id,
+
+    tenant_name: m.tenant_name ?? m.tenant_id,
+
+    role: m.role,
+  }))
+
   return (
     <TenantProvider
       value={{
         tenantId: membership.tenant_id,
 
-        organizationName: membership.tenant_id,
+        organizationName: membership.tenant_name ?? membership.tenant_id,
 
         tier: 'enterprise',
 
         permissions: membership.permissions ?? [],
 
         role: membership.role,
+
+        memberships: tenantMemberships,
       }}
     >
       <DashboardShell
