@@ -35,10 +35,6 @@ export function Sidebar({
 }: SidebarProps) {
   const navSections = buildNavSections(tenantId, permissions)
 
-  const handleLogout = () => {
-    window.location.href = '/api/auth/logout'
-  }
-
   return (
     <>
       {/* Mobile overlay */}
@@ -115,7 +111,6 @@ export function Sidebar({
           email={user?.email}
           role={user?.role}
           avatarUrl={user?.avatarUrl}
-          onLogout={handleLogout}
         />
       </aside>
     </>
