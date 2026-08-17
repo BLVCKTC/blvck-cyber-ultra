@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api'
+import { API_URL, logoutUrl } from '@/lib/api/config'
 
 export type Membership = {
   tenant_id: string
@@ -102,9 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setMemberships(data.memberships ?? [])
 
       setActiveTenant(data.default_tenant_id)
-    } catch (error) {
-      console.error('AUTH SESSION ERROR:', error)
-
+    } catch {
+      // A failed /auth/me probe (network error, or the backend unreachable)
+      // is treated as "not authenticated" — the same as a 401. This is a
+      // normal condition on the login screen, so we don't raise a scary
+      // error; we simply clear any session state.
       setUser(null)
 
       setMemberships([])
@@ -120,23 +122,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   async function logout() {
-    try {
-      await fetch(`${API_URL}/auth/logout`, {
-        method: 'GET',
-
-        credentials: 'include',
-      })
-    } catch (error) {
-      console.error('LOGOUT ERROR:', error)
-    }
-
+    // 1. Clear client-side auth state immediately so no stale authenticated
+    //    UI can be rendered while the browser navigates away. This also
+    //    prevents returning to a protected page via stale React state.
     setUser(null)
-
     setMemberships([])
-
     setActiveTenant(null)
 
-    window.location.href = '/login'
+    // 2. Hand control to the backend's redirect-based logout. A full browser
+    //    navigation is required (NOT fetch) so the backend + Keycloak 302
+    //    redirect chain can complete and every session cookie is cleared
+    //    server-side. Keycloak ultimately redirects back to /login, where
+    //    GET /auth/me returns 401 and the login screen is shown.
+    window.location.href = logoutUrl()
   }
 
   return (

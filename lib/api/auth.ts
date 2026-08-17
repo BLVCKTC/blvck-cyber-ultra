@@ -1,6 +1,6 @@
 // lib/api/auth.ts
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api'
+import { API_URL } from './config'
 
 export type Permission = string
 
@@ -94,62 +94,14 @@ async function readJsonSafe(res: Response): Promise<unknown> {
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Login (email + password -> backend -> Keycloak)                            */
-/* -------------------------------------------------------------------------- */
-
-export type LoginRequest = {
-  email: string
-  password: string
-  remember?: boolean
-}
-
-export type LoginResult = {
-  default_tenant_id: string | null
-}
-
-/**
- * Posts credentials to the backend, which authenticates against Keycloak and
- * sets the httpOnly session cookie. The browser never stores tokens itself.
+/*
+ * NOTE: There is intentionally no email/password `login()` here.
+ *
+ * Login is handled entirely by the backend via Keycloak/OIDC. The frontend
+ * starts the flow with a browser navigation to GET /api/auth/login (see
+ * `loginUrl()` in ./config) and never POSTs credentials. Sending
+ * POST /api/auth/login is incorrect and returns 405 Method Not Allowed.
  */
-export async function login(input: LoginRequest): Promise<LoginResult> {
-  let res: Response
-  try {
-    res = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      credentials: 'include',
-      cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        email: input.email,
-        password: input.password,
-        remember: input.remember ?? false,
-      }),
-    })
-  } catch {
-    throw new AuthError('unavailable', 'We could not reach the sign-in service.')
-  }
-
-  if (res.ok) {
-    const data = (await readJsonSafe(res)) as Partial<LoginResult> | null
-    return { default_tenant_id: data?.default_tenant_id ?? null }
-  }
-
-  if (res.status === 401 || res.status === 403) {
-    throw new AuthError('invalid_credentials', 'Incorrect email or password.')
-  }
-  if (res.status === 429) {
-    throw new AuthError('rate_limited', 'Too many attempts. Please wait and try again.')
-  }
-  if (res.status >= 500) {
-    throw new AuthError('unavailable', 'The sign-in service is temporarily unavailable.')
-  }
-
-  throw new AuthError('unknown', 'We could not sign you in. Please try again.')
-}
 
 /* -------------------------------------------------------------------------- */
 /*  Register (form -> backend -> Keycloak + DB + tenant + membership)          */
