@@ -701,3 +701,7 @@ export function getAlert(id: string) {
 export function getIncident(id: string) {
   return incidents.find((i) => i.id === id)
 }
+
+export function getIncidentAlerts(incidentId: string) {
+  return alerts.filter((a) => a.relatedIncidentId === incidentId)
+}
