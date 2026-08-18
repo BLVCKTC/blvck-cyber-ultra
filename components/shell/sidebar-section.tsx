@@ -41,7 +41,7 @@ export function SidebarSection({
   }, [hasActiveItem])
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="space-y-1">
+    <Collapsible open={open} onOpenChange={setOpen} className="space-y-0.5">
       <CollapsibleTrigger
         className={cn(
           `
@@ -50,28 +50,30 @@ export function SidebarSection({
           w-full
           items-center
           justify-between
-          rounded-lg
+          rounded-md
           px-3
-          py-2
-          text-xs
+          py-1.5
+          text-[11px]
           font-semibold
           uppercase
-          tracking-wide
+          tracking-[0.12em]
+          outline-none
           `,
           `
-          text-muted-foreground
+          text-muted-foreground/70
           transition-colors
-          hover:bg-sidebar-accent/60
           hover:text-foreground
+          focus-visible:ring-2
+          focus-visible:ring-primary/40
           `,
         )}
       >
-        <span>{title}</span>
+        <span className="truncate">{title}</span>
 
         <ChevronDown
           className={cn(
-            'h-4 w-4 transition-transform duration-200',
-            open && 'rotate-180',
+            'h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-transform duration-200 group-hover:text-muted-foreground',
+            !open && '-rotate-90',
           )}
         />
       </CollapsibleTrigger>
@@ -85,11 +87,9 @@ export function SidebarSection({
       >
         <div
           className="
-            ml-2
-            space-y-1
-            border-l
-            border-sidebar-border
-            pl-3
+            space-y-0.5
+            py-0.5
+            pl-1
           "
         >
           {items.map((item) => (
