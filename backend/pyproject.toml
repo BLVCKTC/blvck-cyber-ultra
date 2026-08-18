@@ -32,3 +32,8 @@ script_location = "alembic"
 
 [tool.pyright]
 typeCheckingMode = "basic"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra"
