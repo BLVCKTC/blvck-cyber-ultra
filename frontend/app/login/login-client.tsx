@@ -86,14 +86,25 @@ export function LoginClient() {
 
   return (
     <AuthShell>
+      {/* Live system status — signals an operational, monitored platform */}
+      <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.02] py-1 pl-2 pr-3">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22C55E] opacity-60" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#22C55E]" />
+        </span>
+        <span className="font-mono text-[10px] tracking-[0.14em] text-[#8A93A3]">
+          ALL SYSTEMS OPERATIONAL
+        </span>
+      </div>
+
       <div className="mb-8">
         <p className="mb-3 font-mono text-[11px] tracking-[0.22em] text-[#5B6472]">
           SECURITY OPERATIONS
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-balance text-[#E6EAF0]">
+        <h1 className="text-[1.75rem] font-semibold leading-tight tracking-tight text-balance text-[#E6EAF0]">
           Welcome back.
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-pretty text-[#8A93A3]">
+        <p className="mt-2.5 text-sm leading-relaxed text-pretty text-[#8A93A3]">
           Sign in to your BLVCK CYBER security operations environment.
         </p>
       </div>
@@ -136,7 +147,19 @@ export function LoginClient() {
         </Link>
       </p>
 
-      <div className="mt-12 border-t border-white/5 pt-5">
+      {/* Trust markers */}
+      <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/5 pt-5">
+        {['SOC 2', 'ISO 27001', 'End-to-end encrypted'].map((label) => (
+          <span
+            key={label}
+            className="font-mono text-[10px] tracking-[0.1em] text-[#5B6472]"
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-6">
         <p className="text-xs text-[#5B6472]">
           BLVCK Systems Africa
           <span className="mx-1.5 text-[#2A313B]">·</span>
