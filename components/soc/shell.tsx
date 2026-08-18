@@ -62,15 +62,7 @@ export function DashboardShell({
       >
         <Topbar onMenu={() => setMenuOpen(true)} user={user} />
 
-        <main
-          className="
-            cyber-grid
-            flex-1
-            space-y-6
-            p-4
-            lg:p-6
-          "
-        >
+        <main className="mx-auto w-full max-w-[1600px] flex-1 space-y-6 px-4 py-6 lg:px-8">
           {children}
         </main>
       </div>
@@ -78,26 +70,24 @@ export function DashboardShell({
   )
 }
 
-export function SectionHeading({ title, sub }: { title: string; sub: string }) {
+export function SectionHeading({
+  title,
+  sub,
+  action,
+}: {
+  title: string
+  sub: string
+  action?: React.ReactNode
+}) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="h-8 w-1 rounded-full bg-primary" />
-
-      <div>
-        <h1
-          className="
-          text-lg
-          font-semibold
-          tracking-tight
-          text-foreground
-          text-balance
-        "
-        >
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-balance text-xl font-semibold tracking-tight text-foreground">
           {title}
         </h1>
-
-        <p className="text-xs text-muted-foreground">{sub}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{sub}</p>
       </div>
+      {action}
     </div>
   )
 }

@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'dark',
-  themeColor: '#00d4ff', // Matches the grid color configuration
+  themeColor: '#0b0f14',
 };
 
 export default function RootLayout({
@@ -56,10 +56,10 @@ export default function RootLayout({
   return (
     <html 
       lang="en" 
-      className={`dark ${geistSans.variable} ${geistMono.variable}`}
+      className={`dark bg-background ${geistSans.variable} ${geistMono.variable}`}
       suppressHydrationWarning // Prevents browser extension warning clashes
     >
-      <body className="bg-[#0a0f0c] text-foreground font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+      <body className="bg-background text-foreground font-sans antialiased selection:bg-primary/25 selection:text-foreground">
         <AuthProvider>
           <QueryProvider>
             {children}
