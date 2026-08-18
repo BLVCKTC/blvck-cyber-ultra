@@ -29,47 +29,58 @@ export function SidebarNavItem({
     <Link
       href={href}
       onClick={onNavigate}
+      aria-current={active ? 'page' : undefined}
       className={cn(
         `
         group
+        relative
         flex
         items-center
         gap-3
-        rounded-lg
-        px-3
+        rounded-md
         py-2
+        pl-4
+        pr-2.5
         text-sm
-        transition-all
-        duration-200
+        outline-none
+        transition-colors
+        duration-150
+        focus-visible:ring-2
+        focus-visible:ring-primary/40
         `,
         active
-          ? `
-            bg-sidebar-accent
-            text-sidebar-accent-foreground
-            shadow-sm
-          `
-          : `
-            text-muted-foreground
-            hover:bg-sidebar-accent/60
-            hover:text-foreground
-          `,
+          ? 'bg-primary/10 text-foreground'
+          : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground',
       )}
     >
-      <Icon
+      {/* Active accent rail */}
+      <span
+        aria-hidden
         className={cn(
-          'h-4 w-4 shrink-0',
-          active ? 'text-primary' : 'group-hover:text-primary',
+          'absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary transition-all duration-200',
+          active ? 'opacity-100' : 'opacity-0 group-hover:h-3 group-hover:opacity-40',
         )}
       />
 
-      <span className="flex-1 truncate font-medium">{title}</span>
+      <Icon
+        className={cn(
+          'h-4 w-4 shrink-0 transition-colors',
+          active
+            ? 'text-primary'
+            : 'text-muted-foreground/80 group-hover:text-foreground',
+        )}
+      />
+
+      <span className={cn('flex-1 truncate', active ? 'font-medium' : 'font-normal')}>
+        {title}
+      </span>
 
       {badge && (
         <span
           className="
-            rounded-md
+            rounded
             bg-primary/15
-            px-2
+            px-1.5
             py-0.5
             text-[10px]
             font-semibold

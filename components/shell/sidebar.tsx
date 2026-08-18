@@ -89,10 +89,13 @@ export function Sidebar({
             flex-1
             overflow-y-auto
 
-            space-y-1
+            space-y-4
 
             px-3
             py-4
+
+            [scrollbar-color:var(--color-sidebar-border)_transparent]
+            [scrollbar-width:thin]
           "
         >
           {navSections.map((section) => (
