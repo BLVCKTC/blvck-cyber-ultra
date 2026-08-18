@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 
-export async function GET() {
-  const backend = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api'
+import { logoutUrl } from '@/lib/api/config'
 
-  return NextResponse.redirect(new URL(`${backend}/auth/logout`))
+// Server-side logout entry point (used e.g. by the admin sidebar link).
+// Hands off to the backend's redirect-based logout so the Keycloak logout
+// chain completes and ends back on /login.
+export async function GET() {
+  return NextResponse.redirect(logoutUrl())
 }

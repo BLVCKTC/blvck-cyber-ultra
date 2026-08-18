@@ -3,8 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { DashboardShell } from '@/components/soc/shell'
 import { TenantProvider } from '@/components/providers/tenant-provider'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api'
+import { API_URL } from '@/lib/api/config'
 
 async function getCurrentUser() {
   const cookieStore = await cookies()
