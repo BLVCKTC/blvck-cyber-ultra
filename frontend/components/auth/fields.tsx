@@ -79,7 +79,7 @@ export function AuthPrimaryButton({
   return (
     <button
       className={cn(
-        'flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#2563EB] text-sm font-semibold text-white transition-colors hover:bg-[#1D4FD7] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/40 disabled:cursor-not-allowed disabled:opacity-50',
+        'group flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#2563EB] text-sm font-semibold text-white shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_8px_24px_-8px_rgba(37,99,235,0.6)] transition-all hover:bg-[#1D4FD7] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_10px_28px_-8px_rgba(37,99,235,0.75)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/50 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none [&_svg]:transition-transform [&:not(:disabled):hover_svg]:translate-x-0.5',
         className,
       )}
       {...props}
