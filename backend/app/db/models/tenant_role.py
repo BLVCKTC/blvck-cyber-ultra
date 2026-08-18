@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from datetime import datetime
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -27,6 +29,7 @@ if TYPE_CHECKING:
 
 
 class TenantRole(Base):
+
     __tablename__ = "tenant_roles"
 
     __table_args__ = (
@@ -37,12 +40,14 @@ class TenantRole(Base):
         ),
     )
 
-    id: Mapped[int] = mapped_column(
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
         primary_key=True,
-        autoincrement=True,
+        default=uuid4,
     )
 
-    tenant_id: Mapped[str] = mapped_column(
+    tenant_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
         ForeignKey(
             "tenants.id",
             ondelete="CASCADE",
@@ -109,7 +114,7 @@ class TenantRole(Base):
         cascade="all, delete-orphan",
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"TenantRole("
             f"id={self.id}, "

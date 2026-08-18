@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
     ForeignKey,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
 
 
 class TenantRolePermission(Base):
+
     __tablename__ = "tenant_role_permissions"
 
     __table_args__ = (
@@ -30,12 +33,14 @@ class TenantRolePermission(Base):
         ),
     )
 
-    id: Mapped[int] = mapped_column(
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
         primary_key=True,
-        autoincrement=True,
+        default=uuid4,
     )
 
-    tenant_role_id: Mapped[int] = mapped_column(
+    tenant_role_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
         ForeignKey(
             "tenant_roles.id",
             ondelete="CASCADE",

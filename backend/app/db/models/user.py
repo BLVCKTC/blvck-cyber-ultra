@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
 
 from sqlalchemy import String
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -16,20 +18,16 @@ if TYPE_CHECKING:
     from app.db.models.membership import Membership
 
 
-
 class User(Base):
 
     __tablename__ = "users"
 
-
-    # Internal database ID
-    id: Mapped[int] = mapped_column(
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
         primary_key=True,
-        autoincrement=True,
+        default=uuid4,
     )
 
-
-    # Keycloak UUID
     keycloak_sub: Mapped[str] = mapped_column(
         String(255),
         unique=True,
@@ -37,19 +35,16 @@ class User(Base):
         index=True,
     )
 
-
     email: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         index=True,
     )
 
-
     name: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
     )
-
 
     memberships: Mapped[list["Membership"]] = relationship(
         "Membership",
@@ -58,9 +53,7 @@ class User(Base):
         passive_deletes=True,
     )
 
-
-    def __repr__(self):
-
+    def __repr__(self) -> str:
         return (
             f"User("
             f"id={self.id}, "
