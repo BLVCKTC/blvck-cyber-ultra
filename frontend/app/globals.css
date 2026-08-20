@@ -59,29 +59,29 @@
   color-scheme: dark;
 
   /* Obsidian foundation */
-  --background: #0b0f14;
-  --foreground: #e6edf3;
-  --surface: #111821;
-  --surface-2: #0e141b;
-  --card: #111821;
-  --card-foreground: #e6edf3;
-  --popover: #131b25;
-  --popover-foreground: #e6edf3;
+  --background: #05090b;
+  --foreground: #edf8f3;
+  --surface: #0a1515;
+  --surface-2: #071012;
+  --card: #0a1515;
+  --card-foreground: #edf8f3;
+  --popover: #0c1a19;
+  --popover-foreground: #edf8f3;
 
-  /* Steel blue interactive accent */
-  --primary: #4f7cac;
-  --primary-foreground: #eaf2fb;
-  --secondary: #1a232e;
-  --secondary-foreground: #e6edf3;
-  --muted: #161f29;
-  --muted-foreground: #8b98a7;
-  --accent: #1c2733;
-  --accent-foreground: #e6edf3;
+  /* Emerald security accent */
+  --primary: #39d98a;
+  --primary-foreground: #03100a;
+  --secondary: #102522;
+  --secondary-foreground: #edf8f3;
+  --muted: #0d1c1b;
+  --muted-foreground: #9bb3ad;
+  --accent: #12352d;
+  --accent-foreground: #edf8f3;
 
   --destructive: #ef4444;
-  --border: #26313d;
-  --input: #26313d;
-  --ring: #4f7cac;
+  --border: #1e3833;
+  --input: #1e3833;
+  --ring: #39d98a;
 
   /* Security-state semantics */
   --critical: #ef4444;

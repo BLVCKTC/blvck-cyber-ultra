@@ -11,13 +11,13 @@ const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 // Enhanced cyber-themed metadata matching your previous configurations
 export const metadata: Metadata = {
-  title: 'BLVCK CYBER — AI Cybersecurity for Africa',
+    title: 'BLVCK CYBER — Secure your environment',
   description:
     'AI-powered SOC, threat intelligence, and compliance built for African organizations. Detect, investigate, and respond in seconds.',
   generator: 'v0.app',
   authors: [{ name: "BLVCK One" }],
   openGraph: {
-    title: 'BLVCK CYBER — AI Cybersecurity for Africa',
+  title: 'BLVCK CYBER — Secure your environment',
     description: 'AI-powered SOC, threat intel and compliance built for African organizations.',
     type: 'website',
   },
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'dark',
-  themeColor: '#0b0f14',
+  themeColor: '#05090b',
 };
 
 export default function RootLayout({

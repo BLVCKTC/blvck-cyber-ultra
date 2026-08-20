@@ -33,7 +33,7 @@ def upgrade() -> None:
         "tenants",
         ["tenant_id"],
         ["id"],
-        ondelete="SET NULL",
+        ondelete="CASCADE",
     )
 
 
