@@ -8,7 +8,7 @@ import { ArrowUpRight, Shield, Terminal } from 'lucide-react'
  */
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
-    <main className="relative isolate flex min-h-screen w-full overflow-hidden bg-background text-foreground">
+    <main className="relative isolate flex h-screen w-full overflow-hidden bg-background text-foreground">
       <div
         aria-hidden
         className="absolute inset-0 -z-20 bg-cover bg-center"
@@ -24,9 +24,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
       />
       <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_45%,hsl(var(--primary)/.16),transparent_34%)]" />
 
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-5 py-8 sm:px-8 lg:px-12">
-        <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-border/70 bg-card/80 shadow-2xl shadow-background/60 backdrop-blur-xl lg:grid-cols-[0.78fr_1.22fr]">
-          <section className="order-2 flex flex-col justify-between gap-10 bg-card p-7 sm:p-10 lg:order-1 lg:min-h-[34rem] lg:p-12">
+      <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-center px-4 py-4 sm:px-6 lg:px-10">
+        <div className="grid max-h-full w-full max-w-5xl overflow-hidden rounded-[2rem] border border-border/70 bg-card/80 shadow-2xl shadow-background/60 backdrop-blur-xl lg:grid-cols-[0.78fr_1.22fr]">
+          <section className="order-2 flex min-h-0 flex-col justify-between gap-5 bg-card p-5 sm:p-7 lg:order-1 lg:min-h-0 lg:p-8">
             <div className="flex items-center gap-3">
               <span className="flex size-9 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
                 <Shield aria-hidden className="size-4" />
@@ -42,7 +42,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             </div>
           </section>
 
-          <section className="relative order-1 flex min-h-[18rem] flex-col justify-between overflow-hidden bg-primary p-7 text-primary-foreground sm:p-10 lg:order-2 lg:min-h-[34rem] lg:p-12">
+          <section className="relative order-1 flex min-h-[15rem] flex-col justify-between overflow-hidden bg-primary p-5 text-primary-foreground sm:p-7 lg:order-2 lg:min-h-0 lg:p-8">
             <div
               aria-hidden
               className="absolute inset-0 bg-cover bg-center opacity-75 mix-blend-multiply"
