@@ -25,10 +25,10 @@ class PKCEAttempt(Base):
         default=uuid4,
     )
 
-    tenant_id: Mapped[UUID] = mapped_column(
+    tenant_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("tenants.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
     code_verifier: Mapped[str] = mapped_column(

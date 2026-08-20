@@ -980,7 +980,7 @@ export const COMPLIANCE_FRAMEWORKS = [
 ]
 
 export const mockOrganization: Organization = {
-  id: 'BLVCK-CYBER',
+  id: 'organization',
 
   name: 'BLVCK CYBER',
 

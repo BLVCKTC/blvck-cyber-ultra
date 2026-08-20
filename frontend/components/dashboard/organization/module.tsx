@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const mockOrganization = {
-  id: 'BLVCK-CYBER',
+  id: 'organization',
   name: 'BLVCK Cyber Technologies',
   industry: 'Cybersecurity',
   website: 'https://blvckcyber.com',

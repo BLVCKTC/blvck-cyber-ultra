@@ -13,21 +13,18 @@ export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000/api'
 
 /**
- * Keycloak login is scoped per tenant. The backend's GET /auth/login requires
- * a tenant_id query parameter; this is the ecosystem's default realm/tenant.
- */
-export const DEFAULT_TENANT_ID = 'BLVCK-CYBER'
-
-/**
  * Browser navigation target that starts the Keycloak login flow.
  *
- *   /login → GET /api/auth/login?tenant_id=… → Keycloak → /api/auth/callback
- *
- * This MUST be reached with a full browser navigation (window.location.href),
- * never fetch/axios, so the backend 302 redirect chain can complete.
+ * Tenant selection is resolved after OIDC authentication from the user's
+ * server-side memberships. An optional tenant_id is retained for deep links
+ * and invitation flows, but no synthetic tenant is ever sent by default.
  */
-export function loginUrl(tenantId: string = DEFAULT_TENANT_ID): string {
-  return `${API_URL}/auth/login?tenant_id=${encodeURIComponent(tenantId)}`
+export function loginUrl(tenantId?: string | null): string {
+  const query = tenantId
+    ? `?tenant_id=${encodeURIComponent(tenantId)}`
+    : ''
+
+  return `${API_URL}/auth/login${query}`
 }
 
 /**

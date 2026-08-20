@@ -31,9 +31,7 @@ class PKCEService:
         digest = hashlib.sha256(verifier.encode("utf-8")).digest()
         return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
 
-    def create_login_request(self, tenant_id: uuid.UUID) -> dict[str, str]:
-        if not tenant_id:
-            raise HTTPException(status_code=400, detail="tenant_id_required")
+    def create_login_request(self, tenant_id: uuid.UUID | None = None) -> dict[str, str]:
 
         attempt_id = uuid.uuid4()
         code_verifier = secrets.token_urlsafe(64)
@@ -56,7 +54,7 @@ class PKCEService:
             ),
         }
 
-    def consume_attempt(self, attempt_id: str) -> dict[str, str]:
+    def consume_attempt(self, attempt_id: str) -> dict[str, str | None]:
         try:
             attempt_uuid = uuid.UUID(attempt_id)
         except (ValueError, TypeError, AttributeError):
