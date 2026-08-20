@@ -43,6 +43,15 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </section>
 
           <section className="relative order-1 flex min-h-[18rem] flex-col justify-between overflow-hidden bg-primary p-7 text-primary-foreground sm:p-10 lg:order-2 lg:min-h-[34rem] lg:p-12">
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-cover bg-center opacity-75 mix-blend-multiply"
+              style={{
+                backgroundImage:
+                  "url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pros-and-cons-scaled-2560x1280-NFKc0AGXh8GHMA8B6ndFSL4kjqAX43.jpeg')",
+              }}
+            />
+            <div aria-hidden className="absolute inset-0 bg-primary/35" />
             <div aria-hidden className="absolute -right-24 -top-24 size-72 rounded-full border border-primary-foreground/20" />
             <div aria-hidden className="absolute -bottom-40 -left-24 size-96 rounded-full border border-primary-foreground/10" />
             <div className="relative flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] opacity-70">
