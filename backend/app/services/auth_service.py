@@ -37,7 +37,7 @@ class AuthService:
     def start_login(self, tenant_id: UUID | None = None) -> dict[str, str]:
         return self.pkce.create_login_request(tenant_id)
 
-    async def _process_token_response(self, token_response: dict[str, Any], sync_roles: bool = False, tenant_id: UUID | None = None) -> tuple[dict[str, Any], Any]:
+    async def _process_token_response(self, token_response: dict[str, Any]) -> tuple[dict[str, Any], Any, dict[str, Any]]:
         """Internal helper to handle token verification and user retrieval for both login and refresh."""
         access_token = token_response.get("access_token")
         if not access_token:
@@ -48,42 +48,51 @@ class AuthService:
         if id_token:
             await self.token_service.verify_id_token(id_token, access_token)
 
-        user = self.get_or_create_user(claims=claims, tenant_id=tenant_id, sync_roles=sync_roles)
-        return token_response, user
+        user = self.get_or_create_user(claims=claims)
+        return token_response, user, claims
 
     async def exchange_code(self, *, code: str, attempt_id: str) -> dict[str, Any]:
         attempt = self.pkce.consume_attempt(attempt_id)
-        tenant_id_raw = attempt.get("tenant_id")
-        tenant_id = UUID(str(tenant_id_raw)) if tenant_id_raw else None
+        tenant_id = attempt.get("tenant_id")
 
         token_response = await self.token_service.exchange_authorization_code(
             code=code, code_verifier=attempt["code_verifier"]
         )
         
-        token_data, user = await self._process_token_response(token_response, sync_roles=True, tenant_id=tenant_id)
+        token_data, user, claims = await self._process_token_response(token_response)
 
+        memberships = self.membership_repo.list_for_user(user.id)
         membership = (
             self.membership_repo.get_membership(user_id=user.id, tenant_id=tenant_id)
             if tenant_id
             else None
         )
-        default = self.get_default_membership(user.id)
 
         if tenant_id and not membership:
             raise HTTPException(status_code=403, detail="not_a_member")
 
+        selected = membership or next(
+            (item for item in memberships if item.is_default),
+            memberships[0] if memberships else None,
+        )
+
+        if tenant_id and selected:
+            self.sync_keycloak_role(user_id=user.id, tenant_id=selected.tenant_id, claims=claims)
+
+        default = selected
+
         return {
             **token_data,
             "user": user,
-            "tenant_id": membership.tenant_id if membership else None,
+            "tenant_id": selected.tenant_id if selected else None,
             "default_tenant_id": default.tenant_id if default else None,
             "token_type": token_data.get("token_type", "Bearer"),
         }
 
     async def refresh_session(self, refresh_token: str) -> dict[str, Any]:
         token_response = await self.token_service.refresh_access_token(refresh_token)
-        token_data, user = await self._process_token_response(token_response)
-        
+        token_data, user, _ = await self._process_token_response(token_response)
+
         default = self.get_default_membership(user.id)
 
         return {
@@ -129,7 +138,7 @@ class AuthService:
         )
 
     def get_memberships(self, user_id: UUID):
-        return self.membership_repo.list_memberships_for_user(user_id)
+        return self.membership_repo.list_for_user(user_id)
 
     def get_default_membership(self, user_id: UUID):
         memberships = self.get_memberships(user_id)

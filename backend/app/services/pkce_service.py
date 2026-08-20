@@ -54,7 +54,7 @@ class PKCEService:
             ),
         }
 
-    def consume_attempt(self, attempt_id: str) -> dict[str, str | None]:
+    def consume_attempt(self, attempt_id: str) -> dict[str, str | uuid.UUID | None]:
         try:
             attempt_uuid = uuid.UUID(attempt_id)
         except (ValueError, TypeError, AttributeError):
@@ -83,7 +83,7 @@ class PKCEService:
             raise HTTPException(status_code=400, detail="expired_pkce_attempt")
 
         return {
-            "tenant_id": str(tenant_id),
+            "tenant_id": tenant_id,
             "code_verifier": code_verifier,
         }
 

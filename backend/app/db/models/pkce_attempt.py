@@ -27,7 +27,7 @@ class PKCEAttempt(Base):
 
     tenant_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="SET NULL"),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
         nullable=True,
     )
 
