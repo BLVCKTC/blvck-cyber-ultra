@@ -86,26 +86,30 @@ export function LoginClient() {
 
   return (
     <AuthShell>
-      {/* Live system status — signals an operational, monitored platform */}
-      <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.02] py-1 pl-2 pr-3">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22C55E] opacity-60" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#22C55E]" />
-        </span>
-        <span className="font-mono text-[10px] tracking-[0.14em] text-[#8A93A3]">
-          ALL SYSTEMS OPERATIONAL
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5">
+          <span className="relative flex size-1.5">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-primary">
+            Systems operational
+          </span>
+        </div>
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          Secure access
         </span>
       </div>
 
       <div className="mb-8">
-        <p className="mb-3 font-mono text-[11px] tracking-[0.22em] text-[#5B6472]">
-          SECURITY OPERATIONS
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+          Authenticate with BLVCK ID
         </p>
-        <h1 className="text-[1.75rem] font-semibold leading-tight tracking-tight text-balance text-[#E6EAF0]">
-          Welcome back.
-        </h1>
-        <p className="mt-2.5 text-sm leading-relaxed text-pretty text-[#8A93A3]">
-          Sign in to your BLVCK CYBER security operations environment.
+        <h2 className="text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+          Sign in to your command center.
+        </h2>
+        <p className="mt-3 text-pretty text-sm leading-6 text-muted-foreground">
+          Use your secure single sign-on to continue to BLVCK CYBER.
         </p>
       </div>
 
@@ -126,45 +130,33 @@ export function LoginClient() {
           'Connecting to BLVCK ID…'
         ) : (
           <>
-            Sign in to BLVCK CYBER
-            <ArrowRight className="h-4 w-4" aria-hidden />
+            Continue with BLVCK ID
+            <ArrowRight className="size-4" aria-hidden />
           </>
         )}
       </AuthPrimaryButton>
 
-      <p className="mt-4 flex items-center gap-2 text-xs leading-relaxed text-[#5B6472]">
-        <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#3B82F6]/70" aria-hidden />
-        Authenticated securely with BLVCK ID · Single sign-on
+      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+        <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+        Your session is protected with encrypted, enterprise-grade authentication.
       </p>
 
-      <p className="mt-8 text-sm text-[#8A93A3]">
+      <p className="mt-8 text-sm text-muted-foreground">
         Don&apos;t have a BLVCK account?{' '}
         <Link
           href="/signup"
-          className="font-medium text-[#3B82F6] underline-offset-4 transition-colors hover:text-[#60A5FA] focus:outline-none focus-visible:underline"
+          className="font-medium text-primary underline-offset-4 transition-colors hover:text-primary/80 focus:outline-none focus-visible:underline"
         >
           Create an account
         </Link>
       </p>
 
-      {/* Trust markers */}
-      <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/5 pt-5">
-        {['SOC 2', 'ISO 27001', 'End-to-end encrypted'].map((label) => (
-          <span
-            key={label}
-            className="font-mono text-[10px] tracking-[0.1em] text-[#5B6472]"
-          >
+      <div className="mt-8 flex flex-wrap gap-x-4 gap-y-2 border-t border-border/70 pt-5">
+        {['Private by design', 'Encrypted access', 'SOC-ready'].map((label) => (
+          <span key={label} className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
             {label}
           </span>
         ))}
-      </div>
-
-      <div className="mt-6">
-        <p className="text-xs text-[#5B6472]">
-          BLVCK Systems Africa
-          <span className="mx-1.5 text-[#2A313B]">·</span>
-          <span className="font-mono">© 2026</span>
-        </p>
       </div>
     </AuthShell>
   )
