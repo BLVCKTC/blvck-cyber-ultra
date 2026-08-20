@@ -34,7 +34,7 @@ class AuthService:
         self.pkce = PKCEService(db)
         self.token_service = TokenService()
 
-    def start_login(self, tenant_id: UUID) -> dict[str, str]:
+    def start_login(self, tenant_id: UUID | None = None) -> dict[str, str]:
         return self.pkce.create_login_request(tenant_id)
 
     async def _process_token_response(self, token_response: dict[str, Any], sync_roles: bool = False, tenant_id: UUID | None = None) -> tuple[dict[str, Any], Any]:
@@ -53,10 +53,8 @@ class AuthService:
 
     async def exchange_code(self, *, code: str, attempt_id: str) -> dict[str, Any]:
         attempt = self.pkce.consume_attempt(attempt_id)
-        try:
-            tenant_id = UUID(str(attempt.get("tenant_id", "")))
-        except (TypeError, ValueError):
-            raise HTTPException(status_code=400, detail="invalid_tenant_context")
+        tenant_id_raw = attempt.get("tenant_id")
+        tenant_id = UUID(str(tenant_id_raw)) if tenant_id_raw else None
 
         token_response = await self.token_service.exchange_authorization_code(
             code=code, code_verifier=attempt["code_verifier"]
@@ -64,17 +62,21 @@ class AuthService:
         
         token_data, user = await self._process_token_response(token_response, sync_roles=True, tenant_id=tenant_id)
 
-        membership = self.membership_repo.get_membership(user_id=user.id, tenant_id=tenant_id)
-        if not membership:
-            raise HTTPException(status_code=403, detail="not_a_member")
-
+        membership = (
+            self.membership_repo.get_membership(user_id=user.id, tenant_id=tenant_id)
+            if tenant_id
+            else None
+        )
         default = self.get_default_membership(user.id)
+
+        if tenant_id and not membership:
+            raise HTTPException(status_code=403, detail="not_a_member")
 
         return {
             **token_data,
             "user": user,
-            "tenant_id": membership.tenant_id,
-            "default_tenant_id": default.tenant_id if default else membership.tenant_id,
+            "tenant_id": membership.tenant_id if membership else None,
+            "default_tenant_id": default.tenant_id if default else None,
             "token_type": token_data.get("token_type", "Bearer"),
         }
 

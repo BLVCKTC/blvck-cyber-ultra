@@ -5,13 +5,13 @@ import { API_URL } from './config'
 export type Permission = string
 
 export type AuthUser = {
-  id: number
+  id: string
   email: string | null
   name: string | null
 }
 
 export type Membership = {
-  id: number
+  id?: string
   tenant_id: string
   role: string
   tenant_role_id?: number | null

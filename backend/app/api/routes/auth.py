@@ -125,7 +125,7 @@ def _set_auth_cookies(
 @router.get("/login")
 def login(
     request: Request,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID | None = Query(default=None),
     db=Depends(get_db),
 ):
     auth = AuthService(db)
@@ -180,17 +180,14 @@ async def callback(
         "default_tenant_id"
     )
 
-    if not default_tenant_id:
-        raise HTTPException(
-            status_code=403,
-            detail="user_has_no_tenant_membership",
-        )
+    redirect_path = (
+        f"/dashboard/{default_tenant_id}"
+        if default_tenant_id
+        else "/dashboard"
+    )
 
     response = RedirectResponse(
-        url=(
-            f"{settings.FRONTEND_URL}"
-            f"/dashboard/{default_tenant_id}"
-        ),
+        url=f"{settings.FRONTEND_URL}{redirect_path}",
         status_code=302,
     )
 

@@ -11,17 +11,21 @@ import {
 import { API_URL, logoutUrl } from '@/lib/api/config'
 
 export type Membership = {
+  id?: string
+
   tenant_id: string
+
+  tenant_name?: string | null
 
   role: string
 
   tenant_role?: {
-    id: number
+    id: string | number | null
 
-    key: string
+    key: string | null
 
-    name: string
-  }
+    name: string | null
+  } | null
 
   permissions: string[]
 
@@ -29,7 +33,7 @@ export type Membership = {
 }
 
 export type User = {
-  id: number
+  id: string
 
   email: string
 
