@@ -1,4 +1,5 @@
 from __future__ import annotations
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -19,7 +20,7 @@ class TenantService:
     def list(self) -> list[Tenant]:
         return self.repo.list()
 
-    def get(self, tenant_id: str) -> Tenant:
+    def get(self, tenant_id: UUID) -> Tenant:
         tenant = self.repo.get(tenant_id)
 
         if tenant is None:
@@ -33,7 +34,7 @@ class TenantService:
     def create(
         self,
         payload: TenantCreate,
-        owner_id: int,
+        owner_id: UUID,
     ) -> Tenant:
 
         if self.repo.get_by_slug(payload.slug):
@@ -58,7 +59,7 @@ class TenantService:
 
     def update(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         payload: TenantUpdate,
     ) -> Tenant:
 
@@ -84,7 +85,7 @@ class TenantService:
 
     def delete(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
     ) -> None:
 
         tenant = self.get(tenant_id)

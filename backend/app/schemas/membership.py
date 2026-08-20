@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -8,7 +9,7 @@ from app.db.models.enums import MembershipRole
 
 
 class MembershipUser(BaseModel):
-    id: int
+    id: UUID
     email: EmailStr | None = None
     name: str | None = None
 
@@ -17,12 +18,10 @@ class MembershipUser(BaseModel):
         populate_by_name=True,
     )
 
-class MembershipCreate(BaseModel):
-    """
-    Add an existing user to a tenant.
-    """
 
-    user_id: int = Field(..., gt=0)
+class MembershipCreate(BaseModel):
+    """Add an existing user to a tenant."""
+    user_id: UUID
     role: MembershipRole = MembershipRole.VIEWER
     is_default: bool = False
 
@@ -32,11 +31,7 @@ class MembershipCreate(BaseModel):
 
 
 class MembershipUpdate(BaseModel):
-    """
-    Update an existing membership.
-    All fields are optional; when omitted they are not changed.
-    """
-
+    """Update an existing membership."""
     role: MembershipRole | None = None
     is_default: bool | None = None
 
@@ -44,15 +39,14 @@ class MembershipUpdate(BaseModel):
         populate_by_name=True,
     )
 
+
 class MembershipResponse(BaseModel):
-    id: int = Field(..., gt=0)
-    tenant_id: str = Field(..., min_length=1)
+    id: UUID
+    tenant_id: UUID
     role: MembershipRole
     is_default: bool
-
     created_at: datetime
     updated_at: datetime
-
     user: MembershipUser
 
     model_config = ConfigDict(

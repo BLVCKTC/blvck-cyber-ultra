@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,7 +16,7 @@ class TenantRepo:
             select(Tenant).order_by(Tenant.name)
         ).all()
 
-    def get(self, tenant_id: str) -> Tenant | None:
+    def get(self, tenant_id: UUID) -> Tenant | None:
         return self.db.get(Tenant, tenant_id)
 
     def get_by_slug(self, slug: str) -> Tenant | None:
@@ -23,21 +24,11 @@ class TenantRepo:
             select(Tenant).where(Tenant.slug == slug)
         )
 
-    def create(
-        self,
-        *,
-        name: str,
-        slug: str,
-    ) -> Tenant:
-        tenant = Tenant(
-            name=name,
-            slug=slug,
-        )
-
+    def create(self, *, name: str, slug: str) -> Tenant:
+        tenant = Tenant(name=name, slug=slug)
         self.db.add(tenant)
         self.db.commit()
         self.db.refresh(tenant)
-
         return tenant
 
     def update(self, tenant: Tenant) -> Tenant:

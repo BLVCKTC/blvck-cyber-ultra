@@ -1,134 +1,55 @@
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2AuthorizationCodeBearer
-from jose import jwt
-from sqlalchemy.orm import Session
+"""
+BLVCK CYBER — Keycloak Configuration
 
-from app.core.db import SessionLocal
-from app.db.models.user import User
-from app.db.models.membership import Membership
+This module defines Keycloak endpoints and the OAuth2 scheme.
+Authentication logic resides in app.api.deps, token verification 
+in app.core.security.jwt_verify, and JWKS in app.core.security.jwks.
 
-
-oauth2_scheme = OAuth2AuthorizationCodeBearer(
-    authorizationUrl="/auth/login",
-    tokenUrl="/auth/token",
-)
-
-
-KEYCLOAK_PUBLIC_KEY = """
-YOUR_KEYCLOAK_PUBLIC_KEY
+Do NOT implement get_current_user() in this module.
 """
 
+from fastapi.security import OAuth2AuthorizationCodeBearer
 
-ALGORITHM = "RS256"
+from app.core.config import (
+    KEYCLOAK_URL,
+    KEYCLOAK_REALM,
+    KEYCLOAK_CLIENT_ID,
+    KEYCLOAK_CLIENT_SECRET,
+    KEYCLOAK_ISSUER,
+    KEYCLOAK_ALLOWED_AUDIENCE,
+)
 
+# Base URLs
+KEYCLOAK_REALM_URL = f"{KEYCLOAK_URL.rstrip('/')}/realms/{KEYCLOAK_REALM}"
+OIDC_BASE = f"{KEYCLOAK_REALM_URL}/protocol/openid-connect"
 
+# OIDC Endpoints
+KEYCLOAK_AUTHORIZATION_URL = f"{OIDC_BASE}/auth"
+KEYCLOAK_TOKEN_URL = f"{OIDC_BASE}/token"
+KEYCLOAK_USERINFO_URL = f"{OIDC_BASE}/userinfo"
+KEYCLOAK_LOGOUT_URL = f"{OIDC_BASE}/logout"
+KEYCLOAK_CERTS_URL = f"{OIDC_BASE}/certs"
 
-def get_db():
+# OAuth2 Scheme
+oauth2_scheme = OAuth2AuthorizationCodeBearer(
+    authorizationUrl=KEYCLOAK_AUTHORIZATION_URL,
+    tokenUrl=KEYCLOAK_TOKEN_URL,
+)
 
-    db = SessionLocal()
-
-    try:
-        yield db
-
-    finally:
-        db.close()
-
-
-
-def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-):
-
-    try:
-
-        payload = jwt.decode(
-            token,
-            KEYCLOAK_PUBLIC_KEY,
-            algorithms=[ALGORITHM],
-            options={
-                "verify_aud": False
-            },
-        )
-
-
-        keycloak_id = payload.get("sub")
-
-
-        if not keycloak_id:
-
-            raise Exception(
-                "Missing Keycloak subject"
-            )
-
-
-
-        user = (
-            db.query(User)
-            .filter(
-                User.keycloak_id == keycloak_id
-            )
-            .first()
-        )
-
-
-        if not user:
-
-            raise HTTPException(
-                status_code=404,
-                detail="User not registered",
-            )
-
-
-
-        membership = (
-            db.query(Membership)
-            .filter(
-                Membership.user_id == user.id
-            )
-            .first()
-        )
-
-
-        if not membership:
-
-            raise HTTPException(
-                status_code=403,
-                detail="User has no tenant access",
-            )
-
-
-
-        return {
-
-            "id": user.id,
-
-            "keycloak_id": user.keycloak_id,
-
-            "email": user.email,
-
-            "name": user.name,
-
-            "tenant_id": membership.tenant_id,
-
-        }
-
-
-
-    except HTTPException:
-
-        raise
-
-
-
-    except Exception as e:
-
-        raise HTTPException(
-
-            status_code=status.HTTP_401_UNAUTHORIZED,
-
-            detail="Invalid authentication token",
-
-        )
+__all__ = [
+    "KEYCLOAK_URL",
+    "KEYCLOAK_REALM",
+    "KEYCLOAK_CLIENT_ID",
+    "KEYCLOAK_CLIENT_SECRET",
+    "KEYCLOAK_ISSUER",
+    "KEYCLOAK_ALLOWED_AUDIENCE",
+    "KEYCLOAK_REALM_URL",
+    "KEYCLOAK_AUTHORIZATION_URL",
+    "KEYCLOAK_TOKEN_URL",
+    "KEYCLOAK_USERINFO_URL",
+    "KEYCLOAK_LOGOUT_URL",
+    "KEYCLOAK_CERTS_URL",
+    "oauth2_scheme",
+]

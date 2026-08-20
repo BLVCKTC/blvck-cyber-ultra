@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from urllib.parse import urlencode
+from uuid import UUID
 
 from fastapi import (
     APIRouter,
@@ -10,40 +11,30 @@ from fastapi import (
     Request,
     Response,
 )
+from fastapi.responses import JSONResponse, RedirectResponse
 
-from fastapi.responses import RedirectResponse
-
-from app.api.deps import (
-    get_current_user,
-    get_db,
-)
-
-from app.core.config import (
-    ACTIVE_TENANT_COOKIE_NAME,
-    COOKIE_SAMESITE,
-    SESSION_COOKIE_NAME,
-)
-
-from app.schemas.auth import (
-    MeResponse,
-    MembershipOut,
-    UserOut,
-)
-
+from app.api.deps import get_current_user, get_db
+from app.core.config import settings
+from app.schemas.auth import MeResponse, MembershipOut, UserOut
 from app.schemas.tenant import SetTenantIn
 from app.services.auth_service import AuthService
+
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
 )
 
-COOKIE_DOMAIN = "localhost"
 
 REFRESH_COOKIE = "session_kc_refresh"
+PKCE_COOKIE = "pkce_attempt"
+
+ACCESS_COOKIE_MAX_AGE = 300
+PKCE_COOKIE_MAX_AGE = 600
+LONG_LIVED_COOKIE_AGE = 60 * 60 * 24 * 30
 
 
-def _cookie_secure_for_request(request: Request) -> bool:
+def _is_secure_request(request: Request) -> bool:
     forwarded_proto = request.headers.get("x-forwarded-proto")
 
     if forwarded_proto:
@@ -54,7 +45,47 @@ def _cookie_secure_for_request(request: Request) -> bool:
             == "https"
         )
 
-    return False
+    return request.url.scheme.lower() == "https"
+
+
+def _cookie_options(request: Request) -> dict:
+    return {
+        "httponly": True,
+        "secure": (
+            settings.COOKIE_SECURE
+            or _is_secure_request(request)
+        ),
+        "samesite": settings.COOKIE_SAMESITE,
+        "path": "/",
+    }
+
+
+def _set_cookie(
+    response: Response,
+    request: Request,
+    key: str,
+    value: str | None,
+    max_age: int,
+) -> None:
+    if value is None:
+        return
+
+    response.set_cookie(
+        key=key,
+        value=value,
+        max_age=max_age,
+        **_cookie_options(request),
+    )
+
+
+def _delete_cookie(
+    response: Response,
+    key: str,
+) -> None:
+    response.delete_cookie(
+        key=key,
+        path="/",
+    )
 
 
 def _set_auth_cookies(
@@ -62,70 +93,58 @@ def _set_auth_cookies(
     response: Response,
     request: Request,
     access_token: str,
-    refresh_token: str,
-    default_tenant_id: str | None,
-):
-    secure = _cookie_secure_for_request(request)
-
-    response.set_cookie(
-        key=SESSION_COOKIE_NAME,
+    refresh_token: str | None,
+    default_tenant_id: UUID | str | None,
+) -> None:
+    _set_cookie(
+        response=response,
+        request=request,
+        key=settings.SESSION_COOKIE_NAME,
         value=access_token,
-        httponly=True,
-        secure=secure,
-        samesite=COOKIE_SAMESITE,
-        domain=COOKIE_DOMAIN,
-        path="/",
-        max_age=300,
+        max_age=ACCESS_COOKIE_MAX_AGE,
     )
 
-    response.set_cookie(
+    _set_cookie(
+        response=response,
+        request=request,
         key=REFRESH_COOKIE,
         value=refresh_token,
-        httponly=True,
-        secure=secure,
-        samesite=COOKIE_SAMESITE,
-        domain=COOKIE_DOMAIN,
-        path="/",
-        max_age=60 * 60 * 24 * 30,
+        max_age=LONG_LIVED_COOKIE_AGE,
     )
 
     if default_tenant_id:
-        response.set_cookie(
-            key=ACTIVE_TENANT_COOKIE_NAME,
-            value=default_tenant_id,
-            httponly=True,
-            secure=secure,
-            samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN,
-            path="/",
-            max_age=60 * 60 * 24 * 30,
+        _set_cookie(
+            response=response,
+            request=request,
+            key=settings.ACTIVE_TENANT_COOKIE_NAME,
+            value=str(default_tenant_id),
+            max_age=LONG_LIVED_COOKIE_AGE,
         )
 
 
 @router.get("/login")
 def login(
     request: Request,
-    tenant_id: str = Query(...),
+    tenant_id: UUID = Query(...),
     db=Depends(get_db),
 ):
     auth = AuthService(db)
 
-    login_request = auth.start_login(tenant_id)
+    login_request = auth.start_login(
+        tenant_id=tenant_id
+    )
 
     response = RedirectResponse(
         url=login_request["authorization_url"],
         status_code=302,
     )
 
-    response.set_cookie(
-        key="pkce_attempt",
+    _set_cookie(
+        response=response,
+        request=request,
+        key=PKCE_COOKIE,
         value=login_request["attempt_id"],
-        httponly=True,
-        secure=_cookie_secure_for_request(request),
-        samesite=COOKIE_SAMESITE,
-        domain=COOKIE_DOMAIN,
-        path="/",
-        max_age=600,
+        max_age=PKCE_COOKIE_MAX_AGE,
     )
 
     return response
@@ -139,10 +158,16 @@ async def callback(
     db=Depends(get_db),
 ):
     if not code:
-        raise HTTPException(status_code=400, detail="missing_code")
+        raise HTTPException(
+            status_code=400,
+            detail="missing_code",
+        )
 
     if not state:
-        raise HTTPException(status_code=400, detail="missing_state")
+        raise HTTPException(
+            status_code=400,
+            detail="missing_state",
+        )
 
     auth = AuthService(db)
 
@@ -151,10 +176,21 @@ async def callback(
         attempt_id=state,
     )
 
-    tenant = result.get("default_tenant_id") or "BLVCK-CYBER"
+    default_tenant_id = result.get(
+        "default_tenant_id"
+    )
+
+    if not default_tenant_id:
+        raise HTTPException(
+            status_code=403,
+            detail="user_has_no_tenant_membership",
+        )
 
     response = RedirectResponse(
-        url=f"http://localhost:3000/dashboard/{tenant}",
+        url=(
+            f"{settings.FRONTEND_URL}"
+            f"/dashboard/{default_tenant_id}"
+        ),
         status_code=302,
     )
 
@@ -162,14 +198,13 @@ async def callback(
         response=response,
         request=request,
         access_token=result["access_token"],
-        refresh_token=result["refresh_token"],
-        default_tenant_id=result["default_tenant_id"],
+        refresh_token=result.get("refresh_token"),
+        default_tenant_id=default_tenant_id,
     )
 
-    response.delete_cookie(
-        "pkce_attempt",
-        domain=COOKIE_DOMAIN,
-        path="/",
+    _delete_cookie(
+        response,
+        PKCE_COOKIE,
     )
 
     return response
@@ -180,7 +215,9 @@ async def refresh(
     request: Request,
     db=Depends(get_db),
 ):
-    refresh_token = request.cookies.get(REFRESH_COOKIE)
+    refresh_token = request.cookies.get(
+        REFRESH_COOKIE
+    )
 
     if not refresh_token:
         raise HTTPException(
@@ -190,19 +227,37 @@ async def refresh(
 
     auth = AuthService(db)
 
-    session = await auth.refresh_session(refresh_token)
+    session = await auth.refresh_session(
+        refresh_token
+    )
 
-    response = Response(status_code=200)
+    tenant_id = session.get(
+        "default_tenant_id"
+    )
+
+    response = JSONResponse(
+        content={
+            "ok": True,
+            "default_tenant_id": (
+                str(tenant_id)
+                if tenant_id
+                else None
+            ),
+        },
+        status_code=200,
+    )
 
     _set_auth_cookies(
         response=response,
         request=request,
         access_token=session["access_token"],
-        refresh_token=session["refresh_token"],
-        default_tenant_id=session["default_tenant_id"],
+        refresh_token=session.get(
+            "refresh_token"
+        ),
+        default_tenant_id=tenant_id,
     )
 
-    return {"ok": True}
+    return response
 
 
 @router.get(
@@ -217,18 +272,26 @@ def me(
 
     payload = auth.build_me_response(user)
 
+    tenant_id = payload[
+        "default_tenant_id"
+    ]
+
     permissions = auth.get_user_permissions(
         user_id=user.id,
-        tenant_id=payload["default_tenant_id"],
+        tenant_id=tenant_id,
     )
 
     return MeResponse(
-        user=UserOut(**payload["user"]),
+        user=UserOut(
+            **payload["user"]
+        ),
         memberships=[
-            MembershipOut(**m)
-            for m in payload["memberships"]
+            MembershipOut(**membership)
+            for membership in payload[
+                "memberships"
+            ]
         ],
-        default_tenant_id=payload["default_tenant_id"],
+        default_tenant_id=tenant_id,
         permissions=permissions,
     )
 
@@ -243,21 +306,26 @@ def set_active_tenant(
     auth = AuthService(db)
 
     auth.set_default_tenant(
-        user.id,
-        payload.tenant_id,
+        user_id=user.id,
+        tenant_id=payload.tenant_id,
     )
 
-    response = Response(status_code=200)
+    response = JSONResponse(
+        content={
+            "ok": True,
+            "tenant_id": str(
+                payload.tenant_id
+            ),
+        },
+        status_code=200,
+    )
 
-    response.set_cookie(
-        key=ACTIVE_TENANT_COOKIE_NAME,
-        value=payload.tenant_id,
-        httponly=True,
-        secure=_cookie_secure_for_request(request),
-        samesite=COOKIE_SAMESITE,
-        domain=COOKIE_DOMAIN,
-        path="/",
-        max_age=60 * 60 * 24 * 30,
+    _set_cookie(
+        response=response,
+        request=request,
+        key=settings.ACTIVE_TENANT_COOKIE_NAME,
+        value=str(payload.tenant_id),
+        max_age=LONG_LIVED_COOKIE_AGE,
     )
 
     return response
@@ -268,24 +336,31 @@ async def logout(
     request: Request,
     db=Depends(get_db),
 ):
-    refresh_token = request.cookies.get(REFRESH_COOKIE)
+    refresh_token = request.cookies.get(
+        REFRESH_COOKIE
+    )
 
     auth = AuthService(db)
 
     if refresh_token:
         try:
-            await auth.token_service.logout(refresh_token)
+            await auth.token_service.logout(
+                refresh_token
+            )
         except Exception:
             pass
 
     keycloak_logout_url = (
-        "http://localhost:8080/realms/blvck-cyber/protocol/openid-connect/logout"
+        f"{settings.computed_issuer}"
+        "/protocol/openid-connect/logout"
     )
 
     params = urlencode(
         {
-            "post_logout_redirect_uri": "http://localhost:3000/login",
-            "client_id": "blvck-cyber-api",
+            "post_logout_redirect_uri": (
+                f"{settings.FRONTEND_URL}/login"
+            ),
+            "client_id": settings.KEYCLOAK_CLIENT_ID,
         }
     )
 
@@ -294,16 +369,17 @@ async def logout(
         status_code=302,
     )
 
-    for cookie in (
-        SESSION_COOKIE_NAME,
+    cookies_to_clear = (
+        settings.SESSION_COOKIE_NAME,
         REFRESH_COOKIE,
-        ACTIVE_TENANT_COOKIE_NAME,
-        "pkce_attempt",
-    ):
-        response.delete_cookie(
+        settings.ACTIVE_TENANT_COOKIE_NAME,
+        PKCE_COOKIE,
+    )
+
+    for cookie in cookies_to_clear:
+        _delete_cookie(
+            response,
             cookie,
-            domain=COOKIE_DOMAIN,
-            path="/",
         )
 
     return response

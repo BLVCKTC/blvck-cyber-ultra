@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from uuid import UUID
 from pydantic import BaseModel, Field
 
 class TokenIntrospectionResult(BaseModel):
@@ -7,30 +10,28 @@ class TokenIntrospectionResult(BaseModel):
     roles: list[str] = Field(default_factory=list)
 
 class UserOut(BaseModel):
-    id: int
+    id: UUID
     email: str | None = None
     name: str | None = None
 
 class TenantRoleOut(BaseModel):
-    id: int | None = None
+    id: UUID | None = None
     key: str | None = None
     name: str | None = None
 
 class MembershipOut(BaseModel):
-    tenant_id: str
+    tenant_id: UUID
     role: str
     tenant_role: TenantRoleOut | None = None
-    permissions: list[str] = Field(
-        default_factory=list
-    )
-
+    permissions: list[str] = Field(default_factory=list)
     is_default: bool
 
 class MeResponse(BaseModel):
     user: UserOut
     memberships: list[MembershipOut]
-    default_tenant_id: str | None = None
+    default_tenant_id: UUID | None = None
     permissions: list[str] = Field(default_factory=list)
+
 class LoginResponse(BaseModel):
     authorization_url: str
 

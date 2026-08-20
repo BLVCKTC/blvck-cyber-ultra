@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select, update
+from uuid import UUID
+
+from sqlalchemy import exists, func, select, update
 from sqlalchemy.orm import Session
 
 from app.db.models.enums import MembershipRole
@@ -11,38 +13,30 @@ from app.db.models.tenant_role import TenantRole
 class MembershipRepo:
     """
     Repository for tenant memberships.
+
+    Responsibilities:
+    - Retrieve memberships
+    - Check membership existence
+    - Create/update/delete memberships
+    - Manage default tenant membership
+    - Resolve tenant roles
     """
 
-    def __init__(
-        self,
-        db: Session,
-    ):
+    def __init__(self, db: Session):
         self.db = db
 
-    # ---------------------------------------------------------
-    # Get by ID
-    # ---------------------------------------------------------
+    # =========================================================
+    # RETRIEVAL
+    # =========================================================
 
-    def get_by_id(
-        self,
-        membership_id: int,
-    ) -> Membership | None:
-
-        return self.db.get(
-            Membership,
-            membership_id,
-        )
-
-    # ---------------------------------------------------------
-    # Get membership
-    # ---------------------------------------------------------
+    def get_by_id(self, membership_id: UUID) -> Membership | None:
+        return self.db.get(Membership, membership_id)
 
     def get_membership(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> Membership | None:
-
         return self.db.scalar(
             select(Membership).where(
                 Membership.user_id == user_id,
@@ -50,83 +44,81 @@ class MembershipRepo:
             )
         )
 
-    # ---------------------------------------------------------
-    # Exists
-    # ---------------------------------------------------------
-
     def exists(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> bool:
+        """Efficiently determine whether a user belongs to a tenant."""
 
-        return (
-            self.get_membership(
-                user_id,
-                tenant_id,
+        result = self.db.scalar(
+            select(
+                exists().where(
+                    Membership.user_id == user_id,
+                    Membership.tenant_id == tenant_id,
+                )
             )
-            is not None
         )
 
-    # ---------------------------------------------------------
-    # List memberships
-    # ---------------------------------------------------------
+        return bool(result)
 
-    def list_for_user(
-        self,
-        user_id: int,
-    ) -> list[Membership]:
-
-        return list(
-            self.db.scalars(
-                select(Membership)
-                .where(
-                    Membership.user_id == user_id
-                )
-                .order_by(
-                    Membership.created_at
-                )
-            ).all()
-        )
+    # =========================================================
+    # USER MEMBERSHIPS
+    # =========================================================
 
     def list_memberships_for_user(
         self,
-        user_id: int,
+        user_id: UUID,
     ) -> list[Membership]:
+        """
+        Return all tenant memberships belonging to a user.
 
-        return self.list_for_user(user_id)
-
-    # ---------------------------------------------------------
-    # List tenant members
-    # ---------------------------------------------------------
-
-    def list_for_tenant(
-        self,
-        tenant_id: str,
-    ) -> list[Membership]:
+        This is the canonical method used by AuthService.
+        """
 
         return list(
             self.db.scalars(
                 select(Membership)
-                .where(
-                    Membership.tenant_id == tenant_id
-                )
-                .order_by(
-                    Membership.created_at
-                )
-            ).all()
+                .where(Membership.user_id == user_id)
+                .order_by(Membership.created_at)
+            )
         )
 
-    # ---------------------------------------------------------
-    # Count by legacy role
-    # ---------------------------------------------------------
+    def list_for_user(
+        self,
+        user_id: UUID,
+    ) -> list[Membership]:
+        """
+        Backwards-compatible alias for list_memberships_for_user().
+        """
+
+        return self.list_memberships_for_user(user_id)
+
+    # =========================================================
+    # TENANT MEMBERSHIPS
+    # =========================================================
+
+    def list_for_tenant(
+        self,
+        tenant_id: UUID,
+    ) -> list[Membership]:
+        return list(
+            self.db.scalars(
+                select(Membership)
+                .where(Membership.tenant_id == tenant_id)
+                .order_by(Membership.created_at)
+            )
+        )
+
+    # =========================================================
+    # ROLE / RBAC
+    # =========================================================
 
     def count_by_role(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         role: MembershipRole,
     ) -> int:
-
         return (
             self.db.scalar(
                 select(func.count())
@@ -139,16 +131,11 @@ class MembershipRepo:
             or 0
         )
 
-    # ---------------------------------------------------------
-    # Tenant Role lookup
-    # ---------------------------------------------------------
-
     def get_tenant_role(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         role_key: str,
     ) -> TenantRole | None:
-
         return self.db.scalar(
             select(TenantRole).where(
                 TenantRole.tenant_id == tenant_id,
@@ -156,24 +143,27 @@ class MembershipRepo:
             )
         )
 
-    # ---------------------------------------------------------
-    # Create
-    # ---------------------------------------------------------
+    # =========================================================
+    # PERSISTENCE
+    # =========================================================
 
     def create(
         self,
         *,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
         role: MembershipRole,
-        tenant_role_id: int | None = None,
+        tenant_role_id: UUID | None = None,
         is_default: bool = False,
     ) -> Membership:
+        """
+        Create a tenant membership.
 
-        if self.exists(
-            user_id,
-            tenant_id,
-        ):
+        If the new membership is marked as default,
+        all other default memberships for the user are cleared.
+        """
+
+        if self.exists(user_id, tenant_id):
             raise ValueError(
                 "User is already a member of this tenant."
             )
@@ -195,16 +185,11 @@ class MembershipRepo:
 
         return membership
 
-    # ---------------------------------------------------------
-    # Update legacy role
-    # ---------------------------------------------------------
-
     def update_role(
         self,
         membership: Membership,
         role: MembershipRole,
     ) -> Membership:
-
         membership.role = role
 
         self.db.commit()
@@ -212,16 +197,11 @@ class MembershipRepo:
 
         return membership
 
-    # ---------------------------------------------------------
-    # Update tenant role
-    # ---------------------------------------------------------
-
     def update_tenant_role(
         self,
         membership: Membership,
-        tenant_role_id: int,
+        tenant_role_id: UUID,
     ) -> Membership:
-
         membership.tenant_role_id = tenant_role_id
 
         self.db.commit()
@@ -229,34 +209,48 @@ class MembershipRepo:
 
         return membership
 
-    # ---------------------------------------------------------
-    # Clear default
-    # ---------------------------------------------------------
+    # =========================================================
+    # DEFAULT TENANT MANAGEMENT
+    # =========================================================
 
     def clear_default(
         self,
-        user_id: int,
+        user_id: UUID,
     ) -> None:
+        """
+        Remove default status from every membership belonging
+        to the specified user.
+
+        Does not commit so callers can include this operation
+        in a larger transaction.
+        """
 
         self.db.execute(
             update(Membership)
-            .where(
-                Membership.user_id == user_id
-            )
-            .values(
-                is_default=False
-            )
+            .where(Membership.user_id == user_id)
+            .values(is_default=False)
         )
-
-    # ---------------------------------------------------------
-    # Set default tenant
-    # ---------------------------------------------------------
 
     def set_default(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> None:
+        """
+        Set a user's active/default tenant.
+
+        Only one membership can be the default tenant.
+        """
+
+        membership = self.get_membership(
+            user_id=user_id,
+            tenant_id=tenant_id,
+        )
+
+        if membership is None:
+            raise ValueError(
+                "User is not a member of this tenant."
+            )
 
         self.clear_default(user_id)
 
@@ -266,33 +260,18 @@ class MembershipRepo:
                 Membership.user_id == user_id,
                 Membership.tenant_id == tenant_id,
             )
-            .values(
-                is_default=True
-            )
+            .values(is_default=True)
         )
 
         self.db.commit()
 
-    # Backwards compatibility
-    def set_default_tenant(
-        self,
-        user_id: int,
-        tenant_id: str,
-    ) -> None:
-
-        self.set_default(
-            user_id,
-            tenant_id,
-        )
-
-    # ---------------------------------------------------------
-    # Delete
-    # ---------------------------------------------------------
+    # =========================================================
+    # DELETION
+    # =========================================================
 
     def delete(
         self,
         membership: Membership,
     ) -> None:
-
         self.db.delete(membership)
         self.db.commit()

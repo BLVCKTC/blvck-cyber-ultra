@@ -16,6 +16,14 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "tenant.update",
         "tenant.delete",
 
+        # Organization
+        "organization.view",
+        "organization.update",
+
+        # Security Monitoring
+        "security.dashboard.view",
+        "security.events.view",
+
         # Security Settings
         "security.settings.view",
         "security.settings.update",
@@ -36,9 +44,11 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "access.policies.view",
         "access.policies.manage",
 
-        # MFA
+        # MFA / Identity
         "mfa.view",
         "mfa.manage",
+        "sessions.view",
+        "sessions.revoke",
 
         # Alerts
         "alerts.view",
@@ -50,6 +60,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "incidents.view",
         "incidents.create",
         "incidents.update",
+        "incidents.assign",
         "incidents.close",
         "incidents.delete",
 
@@ -61,7 +72,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
 
         # Vulnerabilities
         "vulnerabilities.view",
-        "vulnerabilities.manage",
+        "vulnerabilities.assign",
+        "vulnerabilities.remediate",
 
         # Threat Intelligence
         "threatintel.view",
@@ -106,131 +118,143 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "compliance.view",
         "compliance.manage",
 
+        # Notifications
+        "notifications.view",
+        "notifications.manage",
+
+        # Billing
+        "billing.view",
+        "billing.manage",
+
         # AI
         "ai.assistant.use",
         "ai.configuration.manage",
     ],
 
 
-# =====================================================
-# CUSTOMER ADMIN
-# =====================================================
-"ADMIN": [
+    # =====================================================
+    # CUSTOMER ADMIN
+    # =====================================================
+    "ADMIN": [
 
-    # Tenant
-    "tenant.view",
-    "tenant.update",
+        # Tenant
+        "tenant.view",
+        "tenant.update",
 
-    # Organization
-    "organization.view",
-    "organization.update",
+        # Organization
+        "organization.view",
+        "organization.update",
 
-    # Security Settings
-    "security.settings.view",
-    "security.settings.update",
+        # Security Monitoring
+        "security.dashboard.view",
+        "security.events.view",
 
-    # Users
-    "users.view",
-    "users.create",
-    "users.update",
-    "users.delete",
+        # Security Settings
+        "security.settings.view",
+        "security.settings.update",
 
-    # Team
-    "team.view",
-    "team.invite",
-    "team.remove",
-    "team.roles.manage",
+        # Users
+        "users.view",
+        "users.create",
+        "users.update",
+        "users.delete",
 
-    # Access Control
-    "access.policies.view",
-    "access.policies.manage",
+        # Team
+        "team.view",
+        "team.invite",
+        "team.remove",
+        "team.roles.manage",
 
-    # MFA / Identity
-    "mfa.view",
-    "mfa.manage",
-    "sessions.view",
-    "sessions.revoke",
+        # Access Control
+        "access.policies.view",
+        "access.policies.manage",
 
-    # Alerts
-    "alerts.view",
-    "alerts.assign",
-    "alerts.close",
-    "alerts.delete",
+        # MFA / Identity
+        "mfa.view",
+        "mfa.manage",
+        "sessions.view",
+        "sessions.revoke",
 
-    # Incidents
-    "incidents.view",
-    "incidents.create",
-    "incidents.update",
-    "incidents.assign",
-    "incidents.close",
-    "incidents.delete",
+        # Alerts
+        "alerts.view",
+        "alerts.assign",
+        "alerts.close",
+        "alerts.delete",
 
-    # Assets
-    "assets.view",
-    "assets.create",
-    "assets.update",
-    "assets.delete",
+        # Incidents
+        "incidents.view",
+        "incidents.create",
+        "incidents.update",
+        "incidents.assign",
+        "incidents.close",
+        "incidents.delete",
 
-    # Vulnerabilities
-    "vulnerabilities.view",
-    "vulnerabilities.assign",
-    "vulnerabilities.remediate",
+        # Assets
+        "assets.view",
+        "assets.create",
+        "assets.update",
+        "assets.delete",
 
-    # Threat Intel
-    "threatintel.view",
-    "threatintel.manage",
+        # Vulnerabilities
+        "vulnerabilities.view",
+        "vulnerabilities.assign",
+        "vulnerabilities.remediate",
 
-    # Detection
-    "detections.view",
-    "detections.create",
-    "detections.update",
-    "detections.delete",
-    "detections.deploy",
+        # Threat Intelligence
+        "threatintel.view",
+        "threatintel.manage",
 
-    # Detection Engineering
-    "detection.analytics.view",
-    "detection.analytics.manage",
-    "detection.automation.view",
-    "detection.automation.manage",
+        # Detection
+        "detections.view",
+        "detections.create",
+        "detections.update",
+        "detections.delete",
+        "detections.deploy",
 
-    # Forensics
-    "forensics.view",
-    "forensics.manage",
+        # Detection Engineering
+        "detection.analytics.view",
+        "detection.analytics.manage",
+        "detection.automation.view",
+        "detection.automation.manage",
 
-    # Reports
-    "reports.view",
-    "reports.generate",
-    "reports.export",
+        # Forensics
+        "forensics.view",
+        "forensics.manage",
 
-    # Compliance
-    "compliance.view",
-    "compliance.manage",
+        # Reports
+        "reports.view",
+        "reports.generate",
+        "reports.export",
 
-    # Integrations
-    "integrations.view",
-    "integrations.manage",
+        # Compliance
+        "compliance.view",
+        "compliance.manage",
 
-    # API
-    "apikeys.view",
-    "apikeys.create",
-    "apikeys.revoke",
+        # Integrations
+        "integrations.view",
+        "integrations.manage",
 
-    # Audit
-    "audit.view",
-    "audit.export",
+        # API
+        "apikeys.view",
+        "apikeys.create",
+        "apikeys.revoke",
 
-    # Notifications
-    "notifications.view",
-    "notifications.manage",
+        # Audit
+        "audit.view",
+        "audit.export",
 
-    # Billing
-    "billing.view",
-    "billing.manage",
+        # Notifications
+        "notifications.view",
+        "notifications.manage",
 
-    # AI
-    "ai.assistant.use",
-    "ai.configuration.manage",
-],
+        # Billing
+        "billing.view",
+        "billing.manage",
+
+        # AI
+        "ai.assistant.use",
+        "ai.configuration.manage",
+    ],
 
 
     # =====================================================
@@ -238,10 +262,14 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     # =====================================================
     "SOC_MANAGER": [
 
-        # Security visibility
+        # Security Monitoring
+        "security.dashboard.view",
+        "security.events.view",
+
+        # Security
         "security.settings.view",
 
-        # Access visibility
+        # Access
         "access.policies.view",
         "mfa.view",
 
@@ -254,6 +282,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "incidents.view",
         "incidents.create",
         "incidents.update",
+        "incidents.assign",
         "incidents.close",
 
         # Assets
@@ -262,9 +291,10 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
 
         # Vulnerabilities
         "vulnerabilities.view",
-        "vulnerabilities.manage",
+        "vulnerabilities.assign",
+        "vulnerabilities.remediate",
 
-        # Threat Intel
+        # Threat Intelligence
         "threatintel.view",
         "threatintel.manage",
 
@@ -305,27 +335,41 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     # =====================================================
     "SOC_ANALYST": [
 
+        # Security Monitoring
+        "security.dashboard.view",
+        "security.events.view",
+
+        # Alerts
         "alerts.view",
         "alerts.assign",
 
+        # Incidents
         "incidents.view",
         "incidents.create",
         "incidents.update",
 
+        # Assets
         "assets.view",
 
+        # Vulnerabilities
         "vulnerabilities.view",
 
+        # Threat Intelligence
         "threatintel.view",
 
+        # Detection
         "detections.view",
 
+        # Detection Analytics
         "detection.analytics.view",
 
+        # Forensics
         "forensics.view",
 
+        # Reports
         "reports.view",
 
+        # AI
         "ai.assistant.use",
     ],
 
@@ -335,19 +379,28 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     # =====================================================
     "INCIDENT_RESPONDER": [
 
+        # Security Monitoring
+        "security.events.view",
+
+        # Alerts
         "alerts.view",
         "alerts.close",
 
+        # Incidents
         "incidents.view",
         "incidents.update",
         "incidents.close",
 
+        # Assets
         "assets.view",
 
+        # Forensics
         "forensics.view",
 
+        # Reports
         "reports.view",
 
+        # AI
         "ai.assistant.use",
     ],
 

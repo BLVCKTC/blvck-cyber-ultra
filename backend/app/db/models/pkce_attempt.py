@@ -1,33 +1,33 @@
+# app/db/models/pkce_attempt.py
+from __future__ import annotations
+
 from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey
 
 from app.db.base import Base
-
 
 if TYPE_CHECKING:
     from app.db.models.tenant import Tenant
 
 
 class PKCEAttempt(Base):
-
     __tablename__ = "pkce_attempts"
 
-    attempt_id: Mapped[str] = mapped_column(
-        String(64),
+    attempt_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
         primary_key=True,
+        default=uuid4,
     )
 
     tenant_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
-        ForeignKey(
-            "tenants.id",
-            ondelete="CASCADE",
-        ),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -37,7 +37,7 @@ class PKCEAttempt(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=False),
         default=datetime.utcnow,
         nullable=False,
     )

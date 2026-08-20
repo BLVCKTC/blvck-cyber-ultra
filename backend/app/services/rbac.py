@@ -1,4 +1,5 @@
 from __future__ import annotations
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -33,8 +34,8 @@ class RBACService:
 
     def get_membership(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> Membership | None:
 
         return (
@@ -52,8 +53,8 @@ class RBACService:
 
     def get_role(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> dict | None:
 
         membership = self.get_membership(
@@ -83,8 +84,8 @@ class RBACService:
 
     def get_permissions(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> list[str]:
 
         membership = self.get_membership(
@@ -120,8 +121,8 @@ class RBACService:
 
     def has_permission(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
         permission_key: str,
     ) -> bool:
 
@@ -139,8 +140,8 @@ class RBACService:
 
     def has_any_permission(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
         permission_keys: list[str],
     ) -> bool:
 
@@ -161,8 +162,8 @@ class RBACService:
 
     def has_all_permissions(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
         permission_keys: list[str],
     ) -> bool:
 
@@ -187,8 +188,8 @@ class RBACService:
 
     def get_authorization_context(
         self,
-        user_id: int,
-        tenant_id: str,
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> dict:
 
         role = self.get_role(

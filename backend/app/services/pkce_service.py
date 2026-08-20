@@ -1,6 +1,11 @@
+# app/services/pkce_service.py
+
+from __future__ import annotations
+
 import base64
 import hashlib
 import secrets
+import uuid
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException
@@ -13,14 +18,7 @@ from app.db.models.pkce_attempt import PKCEAttempt
 
 class PKCEService:
     """
-    Handles the complete PKCE lifecycle.
-
-    Responsibilities:
-    - Generate PKCE verifier/challenge
-    - Store temporary login attempts
-    - Build Keycloak authorization URL
-    - Consume attempts exactly once
-    - Cleanup expired attempts
+    Handles OAuth2/OIDC Authorization Code + PKCE login attempts.
     """
 
     EXPIRY_MINUTES = 10
@@ -28,51 +26,18 @@ class PKCEService:
     def __init__(self, db: Session):
         self.db = db
 
-    def _now(self) -> datetime:
-        """
-        created_at is stored as UTC naive datetime.
-        """
-        return datetime.utcnow()
-
-    def _generate_attempt_id(self) -> str:
-        return secrets.token_urlsafe(32)
-
-    def _generate_code_verifier(self) -> str:
-        """
-        RFC7636 code verifier.
-        """
-        return secrets.token_urlsafe(64)
-
     def _generate_code_challenge(self, verifier: str) -> str:
+        """S256(code_verifier) per RFC 7636."""
         digest = hashlib.sha256(verifier.encode("utf-8")).digest()
+        return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
 
-        return (
-            base64.urlsafe_b64encode(digest)
-            .decode("ascii")
-            .rstrip("=")
-        )
+    def create_login_request(self, tenant_id: uuid.UUID) -> dict[str, str]:
+        if not tenant_id:
+            raise HTTPException(status_code=400, detail="tenant_id_required")
 
-    def create_login_request(
-        self,
-        tenant_id: str,
-    ) -> dict[str, str]:
-        """
-        Creates a PKCE login attempt.
-
-        Returns:
-        {
-            "attempt_id": "...",
-            "authorization_url": "https://keycloak/..."
-        }
-        """
-
-        attempt_id = self._generate_attempt_id()
-
-        code_verifier = self._generate_code_verifier()
-
-        code_challenge = self._generate_code_challenge(
-            code_verifier
-        )
+        attempt_id = uuid.uuid4()
+        code_verifier = secrets.token_urlsafe(64)
+        code_challenge = self._generate_code_challenge(code_verifier)
 
         attempt = PKCEAttempt(
             attempt_id=attempt_id,
@@ -83,84 +48,51 @@ class PKCEService:
         self.db.add(attempt)
         self.db.commit()
 
-        authorization_url = keycloak_authorize_url(
-            state=attempt_id,
-            code_challenge=code_challenge,
-        )
-
         return {
-            "attempt_id": attempt_id,
-            "authorization_url": authorization_url,
+            "attempt_id": str(attempt_id),
+            "authorization_url": keycloak_authorize_url(
+                state=str(attempt_id),
+                code_challenge=code_challenge,
+            ),
         }
 
-    def consume_attempt(
-        self,
-        attempt_id: str,
-    ) -> dict[str, str]:
-        """
-        Consumes a PKCE attempt exactly once.
-
-        Returns:
-        {
-            "tenant_id": "...",
-            "code_verifier": "..."
-        }
-        """
+    def consume_attempt(self, attempt_id: str) -> dict[str, str]:
+        try:
+            attempt_uuid = uuid.UUID(attempt_id)
+        except (ValueError, TypeError, AttributeError):
+            raise HTTPException(status_code=400, detail="invalid_pkce_attempt")
 
         attempt = (
             self.db.query(PKCEAttempt)
-            .filter(
-                PKCEAttempt.attempt_id == attempt_id
-            )
+            .filter(PKCEAttempt.attempt_id == attempt_uuid)
             .first()
         )
 
-        if attempt is None:
-            raise HTTPException(
-                status_code=400,
-                detail="invalid_pkce_attempt",
-            )
+        if not attempt:
+            raise HTTPException(status_code=400, detail="invalid_pkce_attempt")
 
-        expired = (
-            attempt.created_at
-            < self._now()
-            - timedelta(minutes=self.EXPIRY_MINUTES)
-        )
+        # Extract data before deletion
+        tenant_id = attempt.tenant_id
+        code_verifier = attempt.code_verifier
+        created_at = attempt.created_at
 
-        # Delete immediately to prevent replay
+        # Always delete the attempt immediately to prevent replay attacks
         self.db.delete(attempt)
         self.db.commit()
 
-        if expired:
-            raise HTTPException(
-                status_code=400,
-                detail="expired_pkce_attempt",
-            )
+        # Use naive UTC comparison for naive DB columns
+        if created_at < datetime.utcnow() - timedelta(minutes=self.EXPIRY_MINUTES):
+            raise HTTPException(status_code=400, detail="expired_pkce_attempt")
 
         return {
-            "tenant_id": attempt.tenant_id,
-            "code_verifier": attempt.code_verifier,
+            "tenant_id": str(tenant_id),
+            "code_verifier": code_verifier,
         }
 
     def cleanup_expired_attempts(self) -> int:
-        """
-        Deletes expired PKCE attempts.
-
-        Returns:
-            Number of deleted rows.
-        """
-
-        cutoff = (
-            self._now()
-            - timedelta(minutes=self.EXPIRY_MINUTES)
-        )
-
+        cutoff = datetime.utcnow() - timedelta(minutes=self.EXPIRY_MINUTES)
         result = self.db.execute(
-            delete(PKCEAttempt).where(
-                PKCEAttempt.created_at < cutoff
-            )
+            delete(PKCEAttempt).where(PKCEAttempt.created_at < cutoff)
         )
-
         self.db.commit()
-
         return result.rowcount or 0
