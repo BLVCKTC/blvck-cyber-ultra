@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Shield, Terminal } from 'lucide-react'
+import { ArrowUpRight, Shield, Terminal } from 'lucide-react'
 
 /**
  * Full-bleed authentication shell shared by /login and /signup.
@@ -24,40 +24,49 @@ export function AuthShell({ children }: { children: ReactNode }) {
       />
       <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_45%,hsl(var(--primary)/.16),transparent_34%)]" />
 
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-between gap-12 px-6 py-8 sm:px-10 lg:flex-row lg:items-center lg:gap-16 lg:px-16 lg:py-12">
-        <section className="flex max-w-xl flex-col justify-between gap-12 lg:min-h-[34rem]">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-[0_0_32px_hsl(var(--primary)/.18)]">
-              <Shield aria-hidden className="size-5" />
-            </span>
-            <span className="font-mono text-sm font-semibold tracking-[0.24em]">
-              BLVCK <span className="text-primary">CYBER</span>
-            </span>
-          </div>
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-5 py-8 sm:px-8 lg:px-12">
+        <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-border/70 bg-card/80 shadow-2xl shadow-background/60 backdrop-blur-xl lg:grid-cols-[0.78fr_1.22fr]">
+          <section className="order-2 flex flex-col justify-between gap-10 bg-card p-7 sm:p-10 lg:order-1 lg:min-h-[34rem] lg:p-12">
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+                <Shield aria-hidden className="size-4" />
+              </span>
+              <span className="font-mono text-xs font-semibold tracking-[0.22em]">
+                BLVCK <span className="text-primary">CYBER</span>
+              </span>
+            </div>
+            {children}
+            <div className="flex items-center justify-between gap-4 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
+              <span>Private by design</span>
+              <span>© 2026</span>
+            </div>
+          </section>
 
-          <div className="max-w-lg">
-            <p className="mb-5 flex items-center gap-2 font-mono text-xs uppercase tracking-[0.24em] text-primary">
-              <Terminal aria-hidden className="size-3.5" />
-              Security operations platform
-            </p>
-            <h1 className="max-w-xl text-balance text-5xl font-semibold tracking-[-0.06em] sm:text-6xl lg:text-7xl">
-              Welcome back.
-            </h1>
-            <p className="mt-6 max-w-md text-pretty text-base leading-7 text-muted-foreground sm:text-lg">
-              See what matters. Respond with confidence. Your security environment is ready when you are.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-            <span>BLVCK ID</span>
-            <span>Encrypted access</span>
-            <span>© 2026 BLVCK SYSTEMS</span>
-          </div>
-        </section>
-
-        <section className="w-full max-w-md rounded-3xl border border-border/70 bg-card/80 p-6 shadow-2xl shadow-background/40 backdrop-blur-xl sm:p-8 lg:p-10">
-          {children}
-        </section>
+          <section className="relative order-1 flex min-h-[18rem] flex-col justify-between overflow-hidden bg-primary p-7 text-primary-foreground sm:p-10 lg:order-2 lg:min-h-[34rem] lg:p-12">
+            <div aria-hidden className="absolute -right-24 -top-24 size-72 rounded-full border border-primary-foreground/20" />
+            <div aria-hidden className="absolute -bottom-40 -left-24 size-96 rounded-full border border-primary-foreground/10" />
+            <div className="relative flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] opacity-70">
+              <span>BLVCK ID</span>
+              <span className="flex items-center gap-1.5">Online <span className="size-1.5 rounded-full bg-current" /></span>
+            </div>
+            <div className="relative max-w-md">
+              <p className="mb-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] opacity-70">
+                <Terminal aria-hidden className="size-3.5" />
+                Security operations platform
+              </p>
+              <h1 className="text-balance text-5xl font-semibold tracking-[-0.07em] sm:text-6xl lg:text-7xl">
+                Welcome.
+              </h1>
+              <p className="mt-5 max-w-sm text-pretty text-sm leading-6 opacity-75 sm:text-base">
+                See what matters. Respond with confidence. Your security environment is ready when you are.
+              </p>
+            </div>
+            <div className="relative flex items-center justify-between gap-4 border-t border-primary-foreground/20 pt-5 font-mono text-[9px] uppercase tracking-[0.14em] opacity-70">
+              <span>Encrypted access</span>
+              <ArrowUpRight aria-hidden className="size-4" />
+            </div>
+          </section>
+        </div>
       </div>
     </main>
   )
