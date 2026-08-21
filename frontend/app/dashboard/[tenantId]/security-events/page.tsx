@@ -1,6 +1,3 @@
-import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers' // Added this
-import { ApiError } from '@/lib/api/security-events'
 import { SectionHeading } from '@/components/soc/shell'
 import { Panel } from '@/components/soc/panel'
 import { SecurityEventsTable } from '@/components/soc/security-events/security-events-table'
@@ -16,10 +13,6 @@ export default async function SecurityEventsPage({
   params: Promise<{ tenantId: string }>
 }) {
   const { tenantId } = await params
-
-  // Extract token on the server side
-  const cookieStore = await cookies()
-  const token = cookieStore.get('auth-token')?.value || ''
 
   return (
     <div className="space-y-6">

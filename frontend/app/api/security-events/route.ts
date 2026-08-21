@@ -20,11 +20,17 @@ async function proxyRequest(method: string, endpoint: string, body?: unknown) {
   try {
     const headers: Record<string, string> = {
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
     }
 
-    if (tenantId) {
-      headers['Cookie'] = `tenant_id=${tenantId}`
+    const cookieHeader = [
+      token ? `session_kc_access=${encodeURIComponent(token)}` : null,
+      tenantId ? `tenant_id=${encodeURIComponent(tenantId)}` : null,
+    ]
+      .filter(Boolean)
+      .join('; ')
+
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader
     }
 
     if (body) {
@@ -58,32 +64,12 @@ export async function GET(request: NextRequest) {
   return proxyRequest('GET', `/security-events${request.nextUrl.search}`)
 }
 
-export async function PATCH(request: NextRequest) {
-  const eventId = request.nextUrl.searchParams.get('eventId')
-  if (!eventId) {
-    return NextResponse.json({ detail: 'eventId is required' }, { status: 400 })
-  }
-
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    return proxyRequest(
-      'PATCH',
-      `/security-events/${encodeURIComponent(eventId)}`,
-      body,
-    )
+    return proxyRequest('POST', '/security-events', body)
   } catch {
     return NextResponse.json({ detail: 'invalid_json_body' }, { status: 400 })
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  const eventId = request.nextUrl.searchParams.get('eventId')
-  if (!eventId) {
-    return NextResponse.json({ detail: 'eventId is required' }, { status: 400 })
-  }
-
-  return proxyRequest(
-    'DELETE',
-    `/security-events/${encodeURIComponent(eventId)}`,
-  )
-}

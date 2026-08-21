@@ -16,7 +16,7 @@ export interface SecurityEvent {
   readonly raw_event: Record<string, unknown>
   readonly normalized_data: Record<string, unknown>
   readonly created_at: string
-  readonly status?: string
+  readonly status: string
 }
 
 export interface SecurityEventListResponse {
@@ -61,19 +61,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return response.json()
   }
 
-  switch (response.status) {
-    case 401:
-      throw new ApiError(401, 'not_authenticated')
-
-    case 403:
-      throw new ApiError(403, 'forbidden')
-
-    case 404:
-      throw new ApiError(404, 'not_found')
-
-    default:
-      throw new ApiError(response.status, `API_ERROR_${response.status}`)
+  let detail = `API_ERROR_${response.status}`
+  try {
+    const errorBody = await response.json()
+    if (typeof errorBody?.detail === 'string') detail = errorBody.detail
+    else if (errorBody?.detail) detail = JSON.stringify(errorBody.detail)
+  } catch {
+    // Keep the status-based fallback for non-JSON responses.
   }
+
+  throw new ApiError(response.status, detail)
 }
 
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
@@ -118,7 +115,7 @@ export async function getSecurityEvents(
 export async function getSecurityEvent(
   eventId: string,
 ): Promise<SecurityEvent> {
-  const response = await apiFetch(`?eventId=${encodeURIComponent(eventId)}`, {
+  const response = await apiFetch(`/${encodeURIComponent(eventId)}`, {
     method: 'GET',
   })
 
@@ -129,7 +126,7 @@ export async function updateSecurityEvent(
   eventId: string,
   updates: SecurityEventUpdate,
 ): Promise<SecurityEvent> {
-  const response = await apiFetch(`?eventId=${encodeURIComponent(eventId)}`, {
+  const response = await apiFetch(`/${encodeURIComponent(eventId)}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),
   })
@@ -138,7 +135,7 @@ export async function updateSecurityEvent(
 }
 
 export async function deleteSecurityEvent(eventId: string): Promise<void> {
-  const response = await apiFetch(`?eventId=${encodeURIComponent(eventId)}`, {
+  const response = await apiFetch(`/${encodeURIComponent(eventId)}`, {
     method: 'DELETE',
   })
 

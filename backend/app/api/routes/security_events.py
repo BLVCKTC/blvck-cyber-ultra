@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_active_membership, get_db
+from app.api.deps import get_active_membership, get_db, require_permission
 from app.db.models.membership import Membership
 from app.schemas.security_event import (
     SecurityEventCreate,
@@ -16,7 +16,11 @@ from app.schemas.security_event import (
 )
 from app.services.security_event_service import SecurityEventService
 
-router = APIRouter(prefix="/security-events", tags=["Security Events"])
+router = APIRouter(
+    prefix="/security-events",
+    tags=["Security Events"],
+    dependencies=[Depends(require_permission("security.events.view"))],
+)
 
 def get_security_service(db: Session = Depends(get_db)) -> SecurityEventService:
     return SecurityEventService(db)
@@ -85,3 +89,13 @@ def update_security_event(
     if not updated_event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Security event not found.")
     return updated_event
+
+@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_security_event(
+    event_id: UUID,
+    membership: Membership = Depends(get_active_membership),
+    service: SecurityEventService = Depends(get_security_service),
+) -> None:
+    if not service.delete(tenant_id=membership.tenant_id, event_id=event_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Security event not found.")
+

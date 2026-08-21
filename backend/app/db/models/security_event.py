@@ -59,6 +59,13 @@ class SecurityEvent(Base):
         default="low",
     )
 
+    status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="open",
+        server_default="open",
+    )
+
     hostname: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,

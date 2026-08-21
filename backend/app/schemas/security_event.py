@@ -25,6 +25,7 @@ class SecurityEventBase(BaseModel):
     source_type: str = Field(min_length=1, max_length=100)
     event_type: str = Field(min_length=1, max_length=150)
     severity: Severity = "low"
+    status: str = Field(default="open", min_length=1, max_length=50)
     hostname: str | None = Field(default=None, max_length=255)
     
     # Validates IPv4/IPv6 on input
@@ -86,6 +87,7 @@ class SecurityEventUpdate(BaseModel):
     Schema for updating an existing security event.
     All fields are optional to allow partial updates (PATCH).
     """
+    status: str | None = Field(default=None, min_length=1, max_length=50)
     source: str | None = Field(default=None, min_length=1, max_length=255)
     source_type: str | None = Field(default=None, min_length=1, max_length=100)
     event_type: str | None = Field(default=None, min_length=1, max_length=150)
