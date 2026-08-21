@@ -1,5 +1,7 @@
 'use client'
 
+import { AIAssistant } from '@/components/soc/ai-assistant'
+
 import {
   Bot,
   BrainCircuit,
@@ -184,7 +186,26 @@ export function AIAssistantModule() {
         </div>
       </div>
 
-      {/* Mock AI Chat */}
+      {/* Analyst workspace */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
+        <AIAssistant />
+        <div className="rounded-xl border bg-card p-5">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold">Analyst context</h2>
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            The assistant can reason over alerts, incidents, vulnerabilities, and assets available to your tenant.
+          </p>
+          <div className="mt-5 flex flex-col gap-3 text-xs font-mono text-muted-foreground">
+            <div className="flex items-center justify-between border-b border-border pb-3"><span>EVENT WINDOW</span><span className="text-foreground">24 HOURS</span></div>
+            <div className="flex items-center justify-between border-b border-border pb-3"><span>THREAT MODEL</span><span className="text-primary">ACTIVE</span></div>
+            <div className="flex items-center justify-between"><span>RESPONSE MODE</span><span className="text-foreground">ADVISORY</span></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent AI conversations */}
       <div className="rounded-xl border bg-card">
         <div className="border-b p-5">
           <h2 className="font-semibold">Recent AI Conversations</h2>
