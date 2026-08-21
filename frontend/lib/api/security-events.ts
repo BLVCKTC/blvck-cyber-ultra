@@ -118,7 +118,7 @@ export async function getSecurityEvents(
 export async function getSecurityEvent(
   eventId: string,
 ): Promise<SecurityEvent> {
-  const response = await apiFetch(`?eventId=${encodeURIComponent(eventId)}`, {
+  const response = await apiFetch(`/${encodeURIComponent(eventId)}`, {
     method: 'GET',
   })
 
@@ -129,7 +129,7 @@ export async function updateSecurityEvent(
   eventId: string,
   updates: SecurityEventUpdate,
 ): Promise<SecurityEvent> {
-  const response = await apiFetch(`?eventId=${encodeURIComponent(eventId)}`, {
+  const response = await apiFetch(`/${encodeURIComponent(eventId)}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),
   })
@@ -138,7 +138,7 @@ export async function updateSecurityEvent(
 }
 
 export async function deleteSecurityEvent(eventId: string): Promise<void> {
-  const response = await apiFetch(`?eventId=${encodeURIComponent(eventId)}`, {
+  const response = await apiFetch(`/${encodeURIComponent(eventId)}`, {
     method: 'DELETE',
   })
 

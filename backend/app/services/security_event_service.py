@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.security_event import SecurityEvent
 from app.db.repositories.security_event_repo import SecurityEventRepository
-from app.schemas.security_event import SecurityEventCreate
+from app.schemas.security_event import SecurityEventCreate, SecurityEventUpdate
 
 
 class SecurityEventService:
@@ -40,6 +40,19 @@ class SecurityEventService:
         )
         total = self.events.count(tenant_id=tenant_id, **filters)
         return items, total
+
+    def update(
+        self,
+        *,
+        tenant_id: UUID,
+        event_id: UUID,
+        payload: SecurityEventUpdate,
+    ) -> SecurityEvent | None:
+        return self.events.update(
+            tenant_id=tenant_id,
+            event_id=event_id,
+            data=payload.model_dump(exclude_unset=True, mode="json"),
+        )
 
     def delete(self, *, tenant_id: UUID, event_id: UUID) -> bool:
         return self.events.delete(tenant_id=tenant_id, event_id=event_id)

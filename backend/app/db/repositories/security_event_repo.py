@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -31,6 +31,17 @@ class SecurityEventRepository:
         for key, column in mapping.items():
             if value := filters.get(key):
                 criteria.append(column == value)
+
+        if q := filters.get("q"):
+            pattern = f"%{q.strip()}%"
+            criteria.append(or_(
+                SecurityEvent.source.ilike(pattern),
+                SecurityEvent.source_type.ilike(pattern),
+                SecurityEvent.event_type.ilike(pattern),
+                SecurityEvent.hostname.ilike(pattern),
+                SecurityEvent.user_identifier.ilike(pattern),
+                SecurityEvent.message.ilike(pattern),
+            ))
 
         # Range mapping
         if start_time := filters.get("start_time"):
@@ -86,6 +97,14 @@ class SecurityEventRepository:
         except Exception:
             self.db.rollback()
             raise
+
+    def update(self, *, tenant_id: UUID, event_id: UUID, data: dict) -> SecurityEvent | None:
+        event = self.get(tenant_id=tenant_id, event_id=event_id)
+        if event is None:
+            return None
+        for key, value in data.items():
+            setattr(event, key, value)
+        return self._commit_and_return(event)
 
     def delete(self, *, tenant_id: UUID, event_id: UUID) -> bool:
         try:

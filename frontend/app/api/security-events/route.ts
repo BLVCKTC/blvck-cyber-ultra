@@ -23,8 +23,15 @@ async function proxyRequest(method: string, endpoint: string, body?: unknown) {
       Authorization: `Bearer ${token}`,
     }
 
-    if (tenantId) {
-      headers['Cookie'] = `tenant_id=${tenantId}`
+    const cookieHeader = [
+      token ? `session_kc_access=${encodeURIComponent(token)}` : null,
+      tenantId ? `tenant_id=${encodeURIComponent(tenantId)}` : null,
+    ]
+      .filter(Boolean)
+      .join('; ')
+
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader
     }
 
     if (body) {
