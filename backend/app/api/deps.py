@@ -23,14 +23,7 @@ def get_current_user(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    token = None
-    auth_header = request.headers.get("Authorization")
-
-    if auth_header and auth_header.lower().startswith("bearer "):
-        token = auth_header[7:].strip()
-    
-    if not token:
-        token = request.cookies.get(SESSION_COOKIE_NAME)
+    token = request.cookies.get(SESSION_COOKIE_NAME)
 
     if not token:
         raise HTTPException(
