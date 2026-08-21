@@ -24,7 +24,6 @@ async function proxyRequest(
   try {
     const headers: Record<string, string> = {
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
       Cookie: [
         `session_kc_access=${encodeURIComponent(token)}`,
         tenantId ? `tenant_id=${encodeURIComponent(tenantId)}` : null,

@@ -15,7 +15,6 @@ def _as_list(value):
 
 
 def verify_keycloak_access_token(access_token: str) -> dict:
-    print("PyJWT version:", jwt.__version__)
     signing_key = get_signing_key_for_token(access_token)
 
     expected_aud = (KEYCLOAK_ALLOWED_AUDIENCE or "").strip()
@@ -25,9 +24,7 @@ def verify_keycloak_access_token(access_token: str) -> dict:
             access_token,
             options={"verify_signature": False, "verify_aud": False},
         )
-        print("UNVERIFIED decode ok")
-    except Exception as e:
-        print("UNVERIFIED decode FAILED:", repr(e))
+    except Exception:
         raise
 
     token_aud = unverified_claims.get("aud")
@@ -45,9 +42,7 @@ def verify_keycloak_access_token(access_token: str) -> dict:
             issuer=KEYCLOAK_ISSUER,
             options={"verify_aud": False},
         )
-        print("FULL decode ok")
-    except Exception as e:
-        print("FULL decode FAILED:", repr(e))
+    except Exception:
         raise
 
     return claims
