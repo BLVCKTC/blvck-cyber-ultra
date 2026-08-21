@@ -58,6 +58,12 @@ export function buildNavSections(
           icon: LayoutDashboard,
         },
         {
+          title: 'Security Events',
+          href: `${base}/security-events`,
+          icon: Activity,
+          permission: 'security.events.view',
+        },
+        {
           title: 'Alerts',
           href: `${base}/alerts`,
           icon: Bell,
@@ -101,7 +107,6 @@ export function buildNavSections(
         },
       ],
     },
-
     {
       label: 'Compliance & Governance',
       items: [
@@ -119,7 +124,6 @@ export function buildNavSections(
         },
       ],
     },
-
     {
       label: 'Organization Management',
       items: [
@@ -155,7 +159,6 @@ export function buildNavSections(
         },
       ],
     },
-
     {
       label: 'Identity & Access',
       items: [
@@ -173,7 +176,6 @@ export function buildNavSections(
         },
       ],
     },
-
     {
       label: 'Connectivity',
       items: [
@@ -190,7 +192,6 @@ export function buildNavSections(
         },
       ],
     },
-
     {
       label: 'Administration',
       items: [
@@ -214,7 +215,6 @@ export function buildNavSections(
         },
       ],
     },
-
     {
       label: 'AI & Automation',
       items: [
@@ -232,7 +232,6 @@ export function buildNavSections(
         },
       ],
     },
-
     {
       label: 'Enablement',
       items: [

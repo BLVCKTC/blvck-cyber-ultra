@@ -4,11 +4,7 @@ import type { NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const cookies = request.cookies.getAll()
 
-  console.log('MIDDLEWARE COOKIES:', cookies)
-
   const token = request.cookies.get('session_kc_access')
-
-  console.log('SESSION TOKEN:', token)
 
   const protectedRoutes = ['/dashboard', '/admin', '/app']
 

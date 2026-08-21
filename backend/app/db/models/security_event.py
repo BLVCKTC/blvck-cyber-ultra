@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Index, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,7 +15,7 @@ class SecurityEvent(Base):
     Tenant-scoped normalized security event.
 
     Security events are the foundational telemetry objects
-    used by detections, alerts, investigations and hunting.
+    used by detections, alerts, investigations, and threat hunting.
     """
 
     __tablename__ = "security_events"
@@ -29,6 +29,7 @@ class SecurityEvent(Base):
 
     tenant_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -58,13 +59,30 @@ class SecurityEvent(Base):
         default="low",
     )
 
-    hostname: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    hostname: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
 
-    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    source_ip: Mapped[str | None] = mapped_column(
+        String(45),
+        nullable=True,
+    )
 
-    user_identifier: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    destination_ip: Mapped[str | None] = mapped_column(
+        String(45),
+        nullable=True,
+    )
 
-    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    user_identifier: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
 
     raw_event: Mapped[dict] = mapped_column(
         JSONB,

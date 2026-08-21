@@ -1,51 +1,36 @@
 from __future__ import annotations
 
-from fastapi import (
-    Depends,
-    HTTPException,
-    Request,
-)
-from starlette.status import (
-    HTTP_401_UNAUTHORIZED,
-    HTTP_403_FORBIDDEN,
-)
+from fastapi import Depends, HTTPException, Request
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 from sqlalchemy.orm import Session
 
-from app.core.config import (
-    SESSION_COOKIE_NAME,
-    ACTIVE_TENANT_COOKIE_NAME,
-)
+from app.core.config import SESSION_COOKIE_NAME, ACTIVE_TENANT_COOKIE_NAME
 from app.core.db import SessionLocal
 from app.core.security.jwt_verify import verify_keycloak_access_token
 
 from app.db.repositories.user_repo import UserRepo
 from app.db.repositories.membership_repo import MembershipRepo
-
 from app.services.rbac import RBACService
-
-
-# ==========================================================
-# DATABASE
-# ==========================================================
 
 def get_db():
     db = SessionLocal()
-
     try:
         yield db
     finally:
         db.close()
 
-
-# ==========================================================
-# CURRENT USER
-# ==========================================================
-
 def get_current_user(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    token = request.cookies.get(SESSION_COOKIE_NAME)
+    token = None
+    auth_header = request.headers.get("Authorization")
+
+    if auth_header and auth_header.lower().startswith("bearer "):
+        token = auth_header[7:].strip()
+    
+    if not token:
+        token = request.cookies.get(SESSION_COOKIE_NAME)
 
     if not token:
         raise HTTPException(
@@ -54,7 +39,6 @@ def get_current_user(
         )
 
     claims = verify_keycloak_access_token(token)
-
     sub = claims.get("sub")
 
     if not sub:
@@ -64,7 +48,6 @@ def get_current_user(
         )
 
     user = UserRepo(db).get_by_keycloak_sub(sub)
-
     if not user:
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED,
@@ -72,11 +55,6 @@ def get_current_user(
         )
 
     return user
-
-
-# ==========================================================
-# ACTIVE MEMBERSHIP
-# ==========================================================
 
 def get_active_membership(
     request: Request,
@@ -91,11 +69,7 @@ def get_active_membership(
             detail="tenant_not_selected",
         )
 
-    membership = MembershipRepo(db).get_membership(
-        user.id,
-        tenant_id,
-    )
-
+    membership = MembershipRepo(db).get_membership(user.id, tenant_id)
     if membership is None:
         raise HTTPException(
             status_code=HTTP_403_FORBIDDEN,
@@ -104,54 +78,27 @@ def get_active_membership(
 
     return membership
 
-
-# ==========================================================
-# LEGACY ROLE CHECK
-# (Temporary while migrating to RBAC)
-# ==========================================================
-
 def require_roles(allowed_roles: list[str]):
-    def dependency(
-        membership=Depends(get_active_membership),
-    ):
+    def dependency(membership=Depends(get_active_membership)):
         role = (
             membership.role.value
             if hasattr(membership.role, "value")
             else str(membership.role)
         )
-
         if role not in allowed_roles:
             raise HTTPException(
                 status_code=HTTP_403_FORBIDDEN,
                 detail="forbidden",
             )
-
         return membership
-
     return dependency
 
-
-# ==========================================================
-# DATABASE RBAC PERMISSION CHECK
-# ==========================================================
-
 def require_permission(permission_key: str):
-    """
-    Usage:
-
-    @router.get(...)
-    def endpoint(
-        user=Depends(require_permission("alerts.view"))
-    ):
-        ...
-    """
-
     def dependency(
         membership=Depends(get_active_membership),
         db: Session = Depends(get_db),
     ):
         rbac = RBACService(db)
-
         allowed = rbac.has_permission(
             user_id=membership.user_id,
             tenant_id=membership.tenant_id,
@@ -166,7 +113,5 @@ def require_permission(permission_key: str):
                     "required_permission": permission_key,
                 },
             )
-
         return membership
-
     return dependency
