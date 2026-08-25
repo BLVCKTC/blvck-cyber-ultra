@@ -10,6 +10,10 @@ import {
 } from 'react'
 
 import { API_URL, logoutUrl } from '@/lib/api/config'
+import {
+  bestEffortLogout,
+  authenticatedFetch,
+} from '@/lib/api/client'
 
 export type TenantRole = {
   id: string | null
@@ -69,10 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/me`, {
+      const response = await authenticatedFetch(`${API_URL}/auth/me`, {
         method: 'GET',
-        credentials: 'include',
-        cache: 'no-store',
         headers: { Accept: 'application/json' },
       })
 
@@ -98,8 +100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser()
   }, [refreshUser])
 
+  useEffect(() => {
+    if (!state.user) return
+    const refresh = () => {
+      void refreshUser()
+    }
+    const timer = window.setTimeout(refresh, 50 * 60 * 1000)
+    return () => window.clearTimeout(timer)
+  }, [state.user, refreshUser])
+
   const logout = useCallback(async () => {
     setState({ ...INITIAL_STATE, loading: false })
+    await bestEffortLogout()
     window.location.href = logoutUrl()
   }, [])
 
