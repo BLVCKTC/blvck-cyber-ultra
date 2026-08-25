@@ -94,11 +94,11 @@ export function AuthShell({
                 <Terminal aria-hidden className="size-3.5" />
                 Security operations platform
               </p>
-              <h1 className="text-balance text-5xl font-semibold tracking-[-0.07em] sm:text-6xl lg:text-7xl">
+              <h1 className="text-balance text-5xl font-semibold tracking-[-0.07em] text-sidebar-primary sm:text-6xl lg:text-7xl">
                 {welcome}
                 {animateHero && welcome.length < welcomeText.length && <span aria-hidden className="ml-1 animate-pulse">|</span>}
               </h1>
-              <p className="mt-5 max-w-sm text-pretty text-sm leading-6 text-sidebar-foreground/85 sm:text-base">
+              <p className="mt-5 max-w-sm text-pretty text-sm leading-6 text-sidebar-primary/90 sm:text-base">
                 {description}
                 {animateHero && welcome.length === welcomeText.length && description.length < descriptionText.length && <span aria-hidden className="ml-0.5 animate-pulse">|</span>}
               </p>
