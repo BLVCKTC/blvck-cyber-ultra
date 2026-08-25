@@ -44,6 +44,7 @@
   --color-info: var(--info);
   --color-success: var(--success);
   --color-intel: var(--intel);
+  --color-sea-green: var(--sea-green);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --radius-sm: calc(var(--radius) * 0.6);
@@ -69,6 +70,7 @@
   --popover-foreground: #edf8f3;
 
   /* Emerald security accent */
+  --sea-green: #63b89d;
   --primary: #39d98a;
   --primary-foreground: #03100a;
   --secondary: #102522;
