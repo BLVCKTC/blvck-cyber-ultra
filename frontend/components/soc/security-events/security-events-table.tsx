@@ -1,7 +1,18 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, RefreshCw, Search } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  ExternalLink,
+  FileJson,
+  Filter,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  X,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -9,397 +20,110 @@ import {
   updateSecurityEvent,
   type SecurityEvent,
   type SecurityEventSeverity,
+  type SecurityEventStatus,
 } from '@/lib/api/security-events'
 import { SeverityBadge } from '@/components/soc/severity'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-
-type Props = {
-  tenantId: string
-}
-
-type SeverityFilter = 'all' | SecurityEventSeverity
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const PAGE_SIZE = 20
 const SEARCH_DEBOUNCE_MS = 250
+type SeverityFilter = 'all' | SecurityEventSeverity
+type StatusFilter = 'all' | SecurityEventStatus
 
-const timestampFormatter = new Intl.DateTimeFormat('en-GB', {
-  dateStyle: 'medium',
-  timeStyle: 'medium',
-})
+const dateFormatter = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'medium' })
+const shortFormatter = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
-function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp)
+function formatTimestamp(value?: string | null, short = false) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : (short ? shortFormatter : dateFormatter).format(date)
+}
+function display(value?: string | number | null) { return value === null || value === undefined || value === '' ? '—' : String(value) }
+function riskTone(score?: number | null) { return score == null ? 'text-muted-foreground' : score >= 80 ? 'text-critical' : score >= 50 ? 'text-warning' : 'text-success' }
 
-  return Number.isNaN(date.getTime())
-    ? timestamp
-    : timestampFormatter.format(date)
+function JsonBlock({ label, value }: { label: string; value?: Record<string, unknown> | null }) {
+  return (
+    <details className="group rounded-md border border-border/70 bg-muted/20">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-foreground [&::-webkit-details-marker]:hidden">
+        <FileJson className="size-3.5 text-muted-foreground" /> {label}
+        <span className="ml-auto text-muted-foreground group-open:rotate-90">›</span>
+      </summary>
+      <pre className="max-h-56 overflow-auto border-t border-border/60 p-3 font-mono text-[10px] leading-relaxed text-muted-foreground">{value ? JSON.stringify(value, null, 2) : 'No data available'}</pre>
+    </details>
+  )
 }
 
-export function SecurityEventsTable({ tenantId }: Props) {
+function EventDetail({ event, onProcess, processing }: { event: SecurityEvent; onProcess: () => void; processing: boolean }) {
+  return (
+    <div className="flex flex-col gap-5 overflow-y-auto px-5 pb-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2"><SeverityBadge severity={event.severity} /><span className="rounded border border-border px-2 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">{event.status}</span></div>
+        <span className={`font-mono text-lg font-semibold ${riskTone(event.risk_score)}`}>{display(event.risk_score)}<span className="text-[10px] font-normal text-muted-foreground"> / risk</span></span>
+      </div>
+      <div><p className="font-mono text-xs text-primary">{event.event_type}</p><h3 className="mt-1 text-lg font-semibold text-foreground text-pretty">{display(event.message)}</h3><p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">{event.id}</p></div>
+      <section className="flex flex-col gap-3"><h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Event timeline</h4><div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">{[['Event time', event.event_time], ['Ingested', event.ingested_at], ['Created', event.created_at]].map(([label, value]) => <div key={label} className="rounded-md border border-border/70 bg-muted/20 p-3"><p className="text-muted-foreground">{label}</p><p className="mt-1 font-mono text-[10px] text-foreground">{formatTimestamp(value)}</p></div>)}</div></section>
+      <section className="grid grid-cols-2 gap-x-4 gap-y-3 border-y border-border/70 py-4 text-xs"><h4 className="col-span-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Forensic context</h4>{[['Source', event.source], ['Source type', event.source_type], ['Category', event.event_category], ['Host', event.hostname], ['Source IP', event.source_ip], ['Destination IP', event.destination_ip], ['Protocol', event.protocol], ['User', event.user_identifier], ['MITRE tactic', event.mitre_tactic], ['MITRE technique', event.mitre_technique_id || event.mitre_technique], ['Process', event.process_name], ['Action', event.action]].map(([label, value]) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 break-all font-mono text-[11px] text-foreground">{display(value)}</dd></div>)}</section>
+      <div className="flex flex-col gap-2"><JsonBlock label="Normalized data" value={event.normalized_data} /><JsonBlock label="Raw event" value={event.raw_event} /><JsonBlock label="Event metadata" value={event.event_metadata} /></div>
+      {event.status !== 'processed' && <Button onClick={onProcess} disabled={processing} className="w-full"><ShieldCheck data-icon="inline-start" />{processing ? 'Processing event…' : 'Mark as processed'}</Button>}
+    </div>
+  )
+}
+
+export function SecurityEventsTable({ tenantId }: { tenantId: string }) {
   const [events, setEvents] = useState<SecurityEvent[]>([])
   const [totalAvailable, setTotalAvailable] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [query, setQuery] = useState('')
   const [severity, setSeverity] = useState<SeverityFilter>('all')
+  const [status, setStatus] = useState<StatusFilter>('all')
   const [page, setPage] = useState(1)
-  const [processingEventIds, setProcessingEventIds] = useState<Set<string>>(
-    () => new Set(),
-  )
-
-  const requestSequence = useRef(0)
-  const processingIds = useRef(new Set<string>())
-
+  const [selected, setSelected] = useState<SecurityEvent | null>(null)
+  const [processingId, setProcessingId] = useState<string | null>(null)
+  const sequence = useRef(0)
+  const trimmedQuery = query.trim()
   const totalPages = Math.max(1, Math.ceil(totalAvailable / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
-  const trimmedQuery = query.trim()
 
-  const fetchEvents = useCallback(
-    async (isRefresh = false) => {
-      const requestId = ++requestSequence.current
-
-      if (isRefresh) {
-        setRefreshing(true)
-        setLoading(false)
-      } else {
-        setLoading(true)
-        setRefreshing(false)
-      }
-
-      try {
-        const response = await getSecurityEvents({
-          tenantId,
-          q: trimmedQuery || undefined,
-          severity: severity === 'all' ? undefined : severity,
-          limit: PAGE_SIZE,
-          offset: (currentPage - 1) * PAGE_SIZE,
-        })
-
-        if (requestId !== requestSequence.current) {
-          return
-        }
-
-        setEvents(response.items)
-        setTotalAvailable(response.total)
-      } catch (error) {
-        if (requestId !== requestSequence.current) {
-          return
-        }
-
-        console.error('Failed to load security events:', error)
-        toast.error('Failed to load security events')
-      } finally {
-        if (requestId === requestSequence.current) {
-          setLoading(false)
-          setRefreshing(false)
-        }
-      }
-    },
-    [currentPage, severity, tenantId, trimmedQuery],
-  )
-
-  useEffect(() => {
-    if (page !== 1 && (trimmedQuery || severity !== 'all')) {
-      setPage(1)
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void fetchEvents()
-    }, SEARCH_DEBOUNCE_MS)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [fetchEvents, page, severity, trimmedQuery])
-
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages)
-    }
-  }, [page, totalPages])
-
-  const handleReset = () => {
-    setQuery('')
-    setSeverity('all')
-    setPage(1)
-  }
-
-  const handleProcess = async (event: SecurityEvent) => {
-    if (event.status === 'processed' || processingIds.current.has(event.id)) {
-      return
-    }
-
-    processingIds.current.add(event.id)
-
-    setProcessingEventIds((current) => {
-      const next = new Set(current)
-      next.add(event.id)
-      return next
-    })
-
+  const fetchEvents = useCallback(async (isRefresh = false) => {
+    const requestId = ++sequence.current
+    isRefresh ? setRefreshing(true) : setLoading(true)
     try {
-      await updateSecurityEvent(event.id, {
-        status: 'processed',
-      })
+      const response = await getSecurityEvents({ tenantId, q: trimmedQuery || undefined, severity: severity === 'all' ? undefined : severity, status: status === 'all' ? undefined : status, limit: PAGE_SIZE, offset: (currentPage - 1) * PAGE_SIZE })
+      if (requestId === sequence.current) { setEvents(response.items); setTotalAvailable(response.total) }
+    } catch (error) { if (requestId === sequence.current) { console.error('Failed to load security events:', error); toast.error('Failed to load security events') } }
+    finally { if (requestId === sequence.current) { setLoading(false); setRefreshing(false) } }
+  }, [currentPage, severity, status, tenantId, trimmedQuery])
 
-      setEvents((current) =>
-        current.map((item) =>
-          item.id === event.id ? { ...item, status: 'processed' } : item,
-        ),
-      )
+  useEffect(() => { if (page !== 1 && (trimmedQuery || severity !== 'all' || status !== 'all')) { setPage(1); return }; const id = window.setTimeout(() => void fetchEvents(), SEARCH_DEBOUNCE_MS); return () => window.clearTimeout(id) }, [fetchEvents, page, severity, status, trimmedQuery])
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [page, totalPages])
 
-      toast.success('Event marked as processed')
-    } catch (error) {
-      console.error('Failed to update security event:', error)
-      toast.error('Failed to update event status')
-    } finally {
-      processingIds.current.delete(event.id)
-
-      setProcessingEventIds((current) => {
-        const next = new Set(current)
-        next.delete(event.id)
-        return next
-      })
-    }
+  const counts = useMemo(() => events.reduce((acc, event) => { acc[event.severity] += 1; return acc }, { critical: 0, high: 0, medium: 0, low: 0 }), [events])
+  const processing = selected?.id === processingId
+  const handleProcess = async (event: SecurityEvent) => {
+    if (event.status === 'processed' || processingId) return
+    setProcessingId(event.id)
+    try { const updated = await updateSecurityEvent(event.id, { status: 'processed' }); setEvents((items) => items.map((item) => item.id === event.id ? updated : item)); setSelected(updated); toast.success('Event marked as processed') }
+    catch (error) { console.error('Failed to update security event:', error); toast.error('Failed to update event status') }
+    finally { setProcessingId(null) }
   }
-
-  const rangeStart =
-    totalAvailable === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const reset = () => { setQuery(''); setSeverity('all'); setStatus('all'); setPage(1) }
+  const rangeStart = totalAvailable === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const rangeEnd = Math.min(currentPage * PAGE_SIZE, totalAvailable)
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row">
-        <div className="relative flex-1">
-          <Search
-            aria-hidden="true"
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-          />
-
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search event, host, IP, user, or source..."
-            className="pl-9"
-            aria-label="Search security events"
-          />
-        </div>
-
-        <select
-          value={severity}
-          onChange={(event) => {
-            setSeverity(event.target.value as SeverityFilter)
-            setPage(1)
-          }}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          aria-label="Filter by severity"
-        >
-          <option value="all">All severities</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleReset}
-            disabled={!trimmedQuery && severity === 'all'}
-          >
-            Reset
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => void fetchEvents(true)}
-            disabled={loading || refreshing}
-            aria-label="Refresh security events"
-            title="Refresh security events"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={refreshing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'}
-            />
-          </Button>
-        </div>
-      </div>
-
-      <div
-        className="overflow-x-auto rounded-lg border"
-        aria-busy={loading || refreshing}
-      >
-        <table className="w-full text-sm">
-          <caption className="sr-only">Security events</caption>
-
-          <thead className="border-b bg-muted/30">
-            <tr>
-              {[
-                'Severity',
-                'Event',
-                'Source',
-                'Host',
-                'Network',
-                'User',
-                'Timestamp',
-              ].map((heading) => (
-                <th
-                  key={heading}
-                  scope="col"
-                  className="px-4 py-3 text-left font-medium"
-                >
-                  {heading}
-                </th>
-              ))}
-
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                Actions
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="px-4 py-12 text-center text-muted-foreground"
-                >
-                  Loading telemetry...
-                </td>
-              </tr>
-            ) : events.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="px-4 py-12 text-center text-muted-foreground"
-                >
-                  No security events match the current filters.
-                </td>
-              </tr>
-            ) : (
-              events.map((event) => {
-                const isProcessing = processingEventIds.has(event.id)
-                const isProcessed = event.status === 'processed'
-
-                return (
-                  <tr
-                    key={event.id}
-                    className="border-b transition-colors hover:bg-muted/20"
-                  >
-                    <td className="px-4 py-3">
-                      <SeverityBadge severity={event.severity} />
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{event.event_type}</div>
-
-                      {event.message && (
-                        <div
-                          className="mt-1 max-w-xs truncate text-xs text-muted-foreground"
-                          title={event.message}
-                        >
-                          {event.message}
-                        </div>
-                      )}
-
-                      <div className="mt-1 font-mono text-[10px] text-muted-foreground">
-                        {event.id}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{event.source}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {event.source_type}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-3 font-mono text-xs">
-                      {event.hostname ?? '—'}
-                    </td>
-
-                    <td className="px-4 py-3 font-mono text-xs">
-                      <div>{event.source_ip ?? '—'}</div>
-
-                      {event.destination_ip && (
-                        <div className="text-muted-foreground">
-                          → {event.destination_ip}
-                        </div>
-                      )}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      {event.user_identifier ?? '—'}
-                    </td>
-
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                      {formatTimestamp(event.event_time)}
-                    </td>
-
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs"
-                        disabled={isProcessing || isProcessed}
-                        onClick={() => void handleProcess(event)}
-                      >
-                        {isProcessing
-                          ? 'Processing...'
-                          : isProcessed
-                            ? 'Processed'
-                            : 'Mark processed'}
-                      </Button>
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div
-        className="flex items-center justify-between text-xs text-muted-foreground"
-        aria-live="polite"
-      >
-        <span>
-          Showing {rangeStart}–{rangeEnd} of {totalAvailable}
-        </span>
-
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="outline"
-            disabled={currentPage <= 1 || loading}
-            onClick={() => setPage((current) => current - 1)}
-            aria-label="Previous page"
-          >
-            <ChevronLeft aria-hidden="true" />
-          </Button>
-
-          <span className="px-2">
-            Page {currentPage} of {totalPages}
-          </span>
-
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="outline"
-            disabled={currentPage >= totalPages || loading}
-            onClick={() => setPage((current) => current + 1)}
-            aria-label="Next page"
-          >
-            <ChevronRight aria-hidden="true" />
-          </Button>
-        </div>
-      </div>
+  return <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 rounded-md border border-border/70 bg-muted/10 p-3 xl:flex-row xl:items-center">
+      <div className="relative min-w-0 flex-1"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search event, host, IP, user, or source…" className="pl-9" aria-label="Search security events" /></div>
+      <div className="flex flex-wrap items-center gap-2"><Filter aria-hidden="true" className="size-4 text-muted-foreground" /><select value={severity} onChange={(e) => { setSeverity(e.target.value as SeverityFilter); setPage(1) }} className="h-9 rounded-md border border-input bg-background px-2 text-xs" aria-label="Filter by severity"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select><select value={status} onChange={(e) => { setStatus(e.target.value as StatusFilter); setPage(1) }} className="h-9 rounded-md border border-input bg-background px-2 text-xs" aria-label="Filter by status"><option value="all">All statuses</option><option value="open">Open</option><option value="processing">Processing</option><option value="processed">Processed</option><option value="failed">Failed</option><option value="suppressed">Suppressed</option></select><Button type="button" variant="outline" size="sm" onClick={reset} disabled={!trimmedQuery && severity === 'all' && status === 'all'}><X data-icon="inline-start" />Reset</Button><Button type="button" variant="outline" size="icon" onClick={() => void fetchEvents(true)} disabled={loading || refreshing} aria-label="Refresh security events"><RefreshCw className={refreshing ? 'animate-spin' : ''} /></Button></div>
     </div>
-  )
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground"><span className="font-mono">RESULT SET: {totalAvailable}</span><span className="text-critical">{counts.critical} critical</span><span className="text-high">{counts.high} high</span><span className="text-warning">{counts.medium} medium</span><span className="text-info">{counts.low} low</span></div>
+    <div className="overflow-x-auto rounded-md border" aria-busy={loading || refreshing}><table className="w-full min-w-[980px] text-left text-sm"><caption className="sr-only">Security event stream</caption><thead className="border-b bg-muted/30 text-[10px] uppercase tracking-wider text-muted-foreground"><tr>{['Severity', 'Event / MITRE', 'Source', 'Host / Network', 'Identity', 'Risk', 'Observed', 'Status', ''].map((heading) => <th key={heading} scope="col" className="whitespace-nowrap px-3 py-3 font-medium">{heading}</th>)}</tr></thead><tbody>{loading ? Array.from({ length: 6 }, (_, index) => <tr key={index} className="border-b"><td className="px-3 py-4" colSpan={9}><Skeleton className="h-5 w-full" /></td></tr>) : events.length === 0 ? <tr><td colSpan={9} className="px-4 py-14 text-center text-sm text-muted-foreground"><Clock3 className="mx-auto mb-2 size-5" />No security events match the current filters.</td></tr> : events.map((event) => <tr key={event.id} onClick={() => setSelected(event)} className={`cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-accent/40 ${selected?.id === event.id ? 'bg-primary/5' : ''}`}><td className="px-3 py-3"><SeverityBadge severity={event.severity} /></td><td className="max-w-[250px] px-3 py-3"><div className="font-medium text-foreground">{event.event_type}</div><div className="truncate text-xs text-muted-foreground" title={event.message ?? undefined}>{display(event.message)}</div>{event.mitre_technique_id && <div className="mt-1 font-mono text-[10px] text-primary">{event.mitre_technique_id} · {display(event.mitre_technique)}</div>}</td><td className="px-3 py-3"><div className="font-medium">{event.source}</div><div className="text-[10px] text-muted-foreground">{event.source_type}</div></td><td className="px-3 py-3 font-mono text-[11px]"><div>{display(event.hostname)}</div><div className="text-muted-foreground">{display(event.source_ip)}{event.destination_ip ? ` → ${event.destination_ip}` : ''}</div></td><td className="max-w-[130px] truncate px-3 py-3 text-xs">{display(event.user_identifier)}</td><td className={`px-3 py-3 font-mono font-semibold ${riskTone(event.risk_score)}`}>{display(event.risk_score)}</td><td className="whitespace-nowrap px-3 py-3 text-[10px] text-muted-foreground"><span title={formatTimestamp(event.event_time)}>{formatTimestamp(event.event_time, true)}</span></td><td className="px-3 py-3"><span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">{event.status}</span></td><td className="px-3 py-3"><ExternalLink className="size-3.5 text-muted-foreground" /></td></tr>)}</tbody></table></div>
+    <div className="flex items-center justify-between text-xs text-muted-foreground" aria-live="polite"><span>Showing {rangeStart}–{rangeEnd} of {totalAvailable}</span><div className="flex items-center gap-1"><Button type="button" size="icon-sm" variant="outline" disabled={currentPage <= 1 || loading} onClick={() => setPage((p) => p - 1)} aria-label="Previous page"><ChevronLeft /></Button><span className="px-2 font-mono">{currentPage} / {totalPages}</span><Button type="button" size="icon-sm" variant="outline" disabled={currentPage >= totalPages || loading} onClick={() => setPage((p) => p + 1)} aria-label="Next page"><ChevronRight /></Button></div></div>
+    <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-xl"><SheetHeader className="border-b border-border/70 pr-14"><SheetTitle>Event investigation</SheetTitle><SheetDescription>Forensic detail for the selected telemetry record.</SheetDescription></SheetHeader>{selected && <EventDetail event={selected} onProcess={() => void handleProcess(selected)} processing={Boolean(processing)} />}</SheetContent></Sheet>
+  </div>
 }
+
+export { formatTimestamp }

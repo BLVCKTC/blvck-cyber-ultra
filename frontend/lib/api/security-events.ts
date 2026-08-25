@@ -1,3 +1,5 @@
+import { authenticatedFetch } from './client'
+
 export type SecurityEventSeverity = 'low' | 'medium' | 'high' | 'critical'
 
 export type SecurityEventStatus =
@@ -141,11 +143,9 @@ async function apiFetch(
     headers.set('Content-Type', 'application/json')
   }
 
-  return fetch(`/api/security-events${endpoint}`, {
+  return authenticatedFetch(`/api/security-events${endpoint}`, {
     ...options,
     headers,
-    credentials: 'include',
-    cache: 'no-store',
   })
 }
 
