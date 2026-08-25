@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, Shield, Terminal } from 'lucide-react'
 
 /**
@@ -6,7 +6,42 @@ import { ArrowUpRight, Shield, Terminal } from 'lucide-react'
  * The supplied cybersecurity image provides the visual anchor while the
  * content remains a responsive, readable glass surface above it.
  */
-export function AuthShell({ children }: { children: ReactNode }) {
+export function AuthShell({
+  children,
+  animateHero = false,
+}: {
+  children: ReactNode
+  animateHero?: boolean
+}) {
+  const welcomeText = 'Welcome.'
+  const descriptionText = 'See what matters. Respond with confidence. Your security environment is ready when you are.'
+  const [welcome, setWelcome] = useState(animateHero ? '' : welcomeText)
+  const [description, setDescription] = useState(animateHero ? '' : descriptionText)
+
+  useEffect(() => {
+    if (!animateHero) return
+    let index = 0
+    const welcomeTimer = window.setInterval(() => {
+      index += 1
+      setWelcome(welcomeText.slice(0, index))
+      if (index >= welcomeText.length) window.clearInterval(welcomeTimer)
+    }, 110)
+
+    const descriptionTimer = window.setTimeout(() => {
+      let descriptionIndex = 0
+      const timer = window.setInterval(() => {
+        descriptionIndex += 1
+        setDescription(descriptionText.slice(0, descriptionIndex))
+        if (descriptionIndex >= descriptionText.length) window.clearInterval(timer)
+      }, 22)
+    }, welcomeText.length * 110 + 260)
+
+    return () => {
+      window.clearInterval(welcomeTimer)
+      window.clearTimeout(descriptionTimer)
+    }
+  }, [animateHero])
+
   return (
     <main className="relative isolate flex min-h-screen w-full overflow-hidden bg-background text-foreground">
       <div
@@ -42,35 +77,34 @@ export function AuthShell({ children }: { children: ReactNode }) {
             </div>
           </section>
 
-          <section className="relative order-1 flex min-h-[18rem] flex-col justify-between overflow-hidden bg-primary p-7 text-primary-foreground sm:p-10 lg:order-2 lg:min-h-[34rem] lg:p-12">
+          <section className="relative order-1 flex min-h-[18rem] flex-col justify-between overflow-hidden bg-background p-7 text-foreground sm:p-10 lg:order-2 lg:min-h-[34rem] lg:p-12">
             <div
               aria-hidden
-              className="absolute inset-0 bg-cover bg-center opacity-75 mix-blend-multiply"
+              className="absolute inset-0 bg-cover bg-center"
               style={{
                 backgroundImage:
                   "url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pros-and-cons-scaled-2560x1280-NFKc0AGXh8GHMA8B6ndFSL4kjqAX43.jpeg')",
               }}
             />
-            <div aria-hidden className="absolute inset-0 bg-primary/35" />
-            <div aria-hidden className="absolute -right-24 -top-24 size-72 rounded-full border border-primary-foreground/20" />
-            <div aria-hidden className="absolute -bottom-40 -left-24 size-96 rounded-full border border-primary-foreground/10" />
-            <div className="relative flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] opacity-70">
+            <div className="relative flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/75">
               <span>BLVCK ID</span>
               <span className="flex items-center gap-1.5">Online <span className="size-1.5 rounded-full bg-current" /></span>
             </div>
             <div className="relative max-w-md">
-              <p className="mb-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] opacity-70">
+              <p className="mb-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/70">
                 <Terminal aria-hidden className="size-3.5" />
                 Security operations platform
               </p>
               <h1 className="text-balance text-5xl font-semibold tracking-[-0.07em] sm:text-6xl lg:text-7xl">
-                Welcome.
+                {welcome}
+                {animateHero && welcome.length < welcomeText.length && <span aria-hidden className="ml-1 animate-pulse">|</span>}
               </h1>
-              <p className="mt-5 max-w-sm text-pretty text-sm leading-6 opacity-75 sm:text-base">
-                See what matters. Respond with confidence. Your security environment is ready when you are.
+              <p className="mt-5 max-w-sm text-pretty text-sm leading-6 text-foreground/75 sm:text-base">
+                {description}
+                {animateHero && welcome.length === welcomeText.length && description.length < descriptionText.length && <span aria-hidden className="ml-0.5 animate-pulse">|</span>}
               </p>
             </div>
-            <div className="relative flex items-center justify-between gap-4 border-t border-primary-foreground/20 pt-5 font-mono text-[9px] uppercase tracking-[0.14em] opacity-70">
+            <div className="relative flex items-center justify-between gap-4 border-t border-foreground/20 pt-5 font-mono text-[9px] uppercase tracking-[0.14em] text-foreground/70">
               <span>Encrypted access</span>
               <ArrowUpRight aria-hidden className="size-4" />
             </div>

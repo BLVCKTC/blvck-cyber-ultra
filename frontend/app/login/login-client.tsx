@@ -69,7 +69,7 @@ export function LoginClient() {
   // sign-in form.
   if (loading || isAuthenticated) {
     return (
-      <AuthShell>
+      <AuthShell animateHero>
         <div
           className="flex items-center gap-3 text-sm text-[#8A93A3]"
           role="status"
