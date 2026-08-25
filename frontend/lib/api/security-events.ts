@@ -1,6 +1,13 @@
 import { authenticatedFetch } from './client'
 
-export type SecurityEventSeverity = 'low' | 'medium' | 'high' | 'critical'
+const SECURITY_EVENTS_ENDPOINT = '/api/security-events'
+
+export type SecurityEventSeverity =
+  | 'info'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'critical'
 
 export type SecurityEventStatus =
   | 'open'
@@ -9,41 +16,95 @@ export type SecurityEventStatus =
   | 'failed'
   | 'suppressed'
 
+type JsonObject = Record<string, unknown>
+
 export interface SecurityEvent {
   readonly id: string
   readonly tenant_id: string
+
   readonly source_event_id?: string | null
   readonly event_fingerprint?: string | null
   readonly correlation_id?: string | null
   readonly parent_event_id?: string | null
+
   readonly event_time: string
   readonly ingested_at: string
   readonly created_at: string
   readonly schema_version: number
-  readonly event_category: string
+
+  readonly event_category?: string | null
   readonly source: string
   readonly source_type: string
   readonly event_type: string
+
   readonly severity: SecurityEventSeverity
   readonly status: SecurityEventStatus
+
   readonly action?: string | null
   readonly risk_score?: number | null
+
   readonly source_ip?: string | null
   readonly destination_ip?: string | null
   readonly source_port?: number | null
   readonly destination_port?: number | null
   readonly protocol?: string | null
+
   readonly hostname?: string | null
   readonly user_identifier?: string | null
   readonly process_name?: string | null
   readonly process_id?: number | null
+
   readonly mitre_tactic?: string | null
   readonly mitre_technique?: string | null
   readonly mitre_technique_id?: string | null
+
   readonly message?: string | null
-  readonly raw_event?: Record<string, unknown> | null
-  readonly normalized_data?: Record<string, unknown> | null
-  readonly event_metadata?: Record<string, unknown> | null
+
+  readonly raw_event?: JsonObject | null
+  readonly normalized_data?: JsonObject | null
+  readonly event_metadata?: JsonObject | null
+}
+
+export interface SecurityEventCreate {
+  readonly source_event_id?: string | null
+  readonly event_fingerprint?: string | null
+  readonly correlation_id?: string | null
+  readonly parent_event_id?: string | null
+
+  readonly event_time: string
+  readonly schema_version?: number
+
+  readonly event_category?: string | null
+  readonly source: string
+  readonly source_type: string
+  readonly event_type: string
+
+  readonly severity?: SecurityEventSeverity
+  readonly status?: SecurityEventStatus
+
+  readonly action?: string | null
+  readonly risk_score?: number | null
+
+  readonly source_ip?: string | null
+  readonly destination_ip?: string | null
+  readonly source_port?: number | null
+  readonly destination_port?: number | null
+  readonly protocol?: string | null
+
+  readonly hostname?: string | null
+  readonly user_identifier?: string | null
+  readonly process_name?: string | null
+  readonly process_id?: number | null
+
+  readonly mitre_tactic?: string | null
+  readonly mitre_technique?: string | null
+  readonly mitre_technique_id?: string | null
+
+  readonly message?: string | null
+
+  readonly raw_event?: JsonObject | null
+  readonly normalized_data?: JsonObject | null
+  readonly event_metadata?: JsonObject | null
 }
 
 export interface SecurityEventListResponse {
@@ -55,7 +116,6 @@ export interface SecurityEventListResponse {
 
 export interface SecurityEventFilters {
   readonly q?: string
-  readonly tenantId?: string
   readonly severity?: SecurityEventSeverity
   readonly status?: SecurityEventStatus
   readonly event_category?: string
@@ -73,8 +133,7 @@ export interface SecurityEventFilters {
 
 export interface SecurityEventUpdate {
   readonly status?: SecurityEventStatus
-  readonly severity?: SecurityEventSeverity
-  readonly message?: string | null
+  readonly event_metadata?: JsonObject | null
 }
 
 export class ApiError extends Error {
@@ -87,73 +146,19 @@ export class ApiError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  const contentType = response.headers.get('content-type') ?? ''
-  const isJson = contentType.includes('application/json')
-
-  if (response.ok) {
-    if (!isJson) {
-      throw new ApiError(
-        response.status,
-        'The API returned an unexpected response format.',
-      )
-    }
-
-    return (await response.json()) as T
-  }
-
-  let detail = `API_ERROR_${response.status}`
-
-  if (isJson) {
-    try {
-      const body: unknown = await response.json()
-
-      if (isRecord(body)) {
-        if (typeof body.detail === 'string') {
-          detail = body.detail
-        } else if (body.detail !== undefined) {
-          detail = JSON.stringify(body.detail)
-        }
-      }
-    } catch {
-      // Preserve the status-based fallback.
-    }
-  }
-
-  throw new ApiError(response.status, detail)
-}
-
-async function apiFetch(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<Response> {
-  const headers = new Headers(options.headers)
-
-  headers.set('Accept', 'application/json')
-
-  if (options.body !== undefined && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  return authenticatedFetch(`/api/security-events${endpoint}`, {
-    ...options,
-    headers,
-  })
+function getEventPath(eventId: string): string {
+  return `/${encodeURIComponent(eventId)}`
 }
 
 function buildQueryString(filters: SecurityEventFilters = {}): string {
   const params = new URLSearchParams()
+
   const queryFilters: Record<string, unknown> = {
     q: filters.q,
-    tenant_id: filters.tenantId,
     severity: filters.severity,
     status: filters.status,
     event_category: filters.event_category,
@@ -168,29 +173,127 @@ function buildQueryString(filters: SecurityEventFilters = {}): string {
     limit: filters.limit,
     offset: filters.offset,
   }
+
   for (const [key, value] of Object.entries(queryFilters)) {
     if (value === undefined || value === null) {
       continue
     }
-    if (typeof value === 'string' && value.trim() === '') {
+
+    if (typeof value === 'string') {
+      const normalizedValue = value.trim()
+
+      if (!normalizedValue) {
+        continue
+      }
+
+      params.set(key, normalizedValue)
       continue
     }
+
     params.set(key, String(value))
   }
+
   const query = params.toString()
+
   return query ? `?${query}` : ''
 }
+
+async function parseErrorMessage(response: Response): Promise<string> {
+  const fallback = `API_ERROR_${response.status}`
+  const contentType = response.headers.get('content-type') ?? ''
+
+  if (!contentType.includes('application/json')) {
+    return fallback
+  }
+
+  try {
+    const body: unknown = await response.json()
+
+    if (!isRecord(body) || body.detail === undefined) {
+      return fallback
+    }
+
+    if (typeof body.detail === 'string') {
+      return body.detail
+    }
+
+    return JSON.stringify(body.detail) || fallback
+  } catch {
+    return fallback
+  }
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  const contentType = response.headers.get('content-type') ?? ''
+  const isJson = contentType.includes('application/json')
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseErrorMessage(response))
+  }
+
+  if (!isJson) {
+    throw new ApiError(
+      response.status,
+      'The API returned an unexpected response format.',
+    )
+  }
+
+  try {
+    return (await response.json()) as T
+  } catch {
+    throw new ApiError(response.status, 'The API returned invalid JSON.')
+  }
+}
+
+async function apiFetch(
+  endpoint = '',
+  options: RequestInit = {},
+): Promise<Response> {
+  const headers = new Headers(options.headers)
+
+  headers.set('Accept', 'application/json')
+
+  if (options.body !== undefined && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
+  return authenticatedFetch(`${SECURITY_EVENTS_ENDPOINT}${endpoint}`, {
+    ...options,
+    headers,
+  })
+}
+
+function hasUpdateFields(updates: SecurityEventUpdate): boolean {
+  return Object.values(updates).some((value) => value !== undefined)
+}
+
 export async function getSecurityEvents(
   filters: SecurityEventFilters = {},
 ): Promise<SecurityEventListResponse> {
   const response = await apiFetch(buildQueryString(filters))
+
   return handleResponse<SecurityEventListResponse>(response)
 }
 
 export async function getSecurityEvent(
   eventId: string,
 ): Promise<SecurityEvent> {
-  const response = await apiFetch(`/${encodeURIComponent(eventId)}`)
+  const response = await apiFetch(getEventPath(eventId))
+
+  return handleResponse<SecurityEvent>(response)
+}
+
+export async function createSecurityEvent(
+  event: SecurityEventCreate,
+): Promise<SecurityEvent> {
+  const response = await apiFetch('', {
+    method: 'POST',
+    body: JSON.stringify(event),
+  })
 
   return handleResponse<SecurityEvent>(response)
 }
@@ -199,11 +302,11 @@ export async function updateSecurityEvent(
   eventId: string,
   updates: SecurityEventUpdate,
 ): Promise<SecurityEvent> {
-  if (Object.keys(updates).length === 0) {
-    throw new TypeError('At least one update field is required.')
+  if (!hasUpdateFields(updates)) {
+    throw new TypeError('At least one defined update field is required.')
   }
 
-  const response = await apiFetch(`/${encodeURIComponent(eventId)}`, {
+  const response = await apiFetch(getEventPath(eventId), {
     method: 'PATCH',
     body: JSON.stringify(updates),
   })
@@ -212,7 +315,7 @@ export async function updateSecurityEvent(
 }
 
 export async function deleteSecurityEvent(eventId: string): Promise<void> {
-  const response = await apiFetch(`/${encodeURIComponent(eventId)}`, {
+  const response = await apiFetch(getEventPath(eventId), {
     method: 'DELETE',
   })
 

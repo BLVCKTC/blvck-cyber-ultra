@@ -27,6 +27,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         # Security Settings
         "security.settings.view",
         "security.settings.update",
+        "security.events.update",
 
         # Users
         "users.view",
@@ -148,6 +149,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         # Security Monitoring
         "security.dashboard.view",
         "security.events.view",
+        "security.events.update",
 
         # Security Settings
         "security.settings.view",
@@ -265,6 +267,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         # Security Monitoring
         "security.dashboard.view",
         "security.events.view",
+        "security.events.update",
 
         # Security
         "security.settings.view",
@@ -338,6 +341,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         # Security Monitoring
         "security.dashboard.view",
         "security.events.view",
+        "security.events.update",
 
         # Alerts
         "alerts.view",
@@ -381,7 +385,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
 
         # Security Monitoring
         "security.events.view",
-
+        "security.events.update",
+        
         # Alerts
         "alerts.view",
         "alerts.close",

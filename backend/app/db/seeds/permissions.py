@@ -581,4 +581,10 @@ PERMISSIONS = [
      "",
      "low"),
 
+    ("security.events.update",
+     "Update Security Events",
+     "Security",
+     "",
+     "medium"),
+
 ]
