@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any, Mapping
 from uuid import UUID
 
 from sqlalchemy import delete, func, or_, select
@@ -11,110 +12,334 @@ from app.db.models.security_event import SecurityEvent
 
 
 class SecurityEventRepository:
-    def __init__(self, db: Session):
+    """
+    Persistence repository for tenant-scoped security events.
+
+    Tenant isolation is enforced in every read and write operation.
+    """
+
+    _PROTECTED_FIELDS = frozenset(
+        {
+            "id",
+            "tenant_id",
+            "created_at",
+            "updated_at",
+        }
+    )
+
+    _FILTERABLE_FIELDS = {
+        "severity": SecurityEvent.severity,
+        "status": SecurityEvent.status,
+        "event_category": SecurityEvent.event_category,
+        "event_type": SecurityEvent.event_type,
+        "source": SecurityEvent.source,
+        "source_type": SecurityEvent.source_type,
+        "hostname": SecurityEvent.hostname,
+        "user_identifier": SecurityEvent.user_identifier,
+        "mitre_technique_id": SecurityEvent.mitre_technique_id,
+    }
+
+    _SEARCHABLE_FIELDS = (
+        SecurityEvent.source,
+        SecurityEvent.source_type,
+        SecurityEvent.event_category,
+        SecurityEvent.event_type,
+        SecurityEvent.hostname,
+        SecurityEvent.user_identifier,
+        SecurityEvent.process_name,
+        SecurityEvent.mitre_tactic,
+        SecurityEvent.mitre_technique,
+        SecurityEvent.mitre_technique_id,
+        SecurityEvent.message,
+        SecurityEvent.correlation_id,
+        SecurityEvent.source_event_id,
+    )
+
+    _MODEL_COLUMNS = frozenset(SecurityEvent.__table__.columns.keys())
+
+    def __init__(self, db: Session) -> None:
         self.db = db
+
+    # ------------------------------------------------------------------
+    # Validation and filters
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def _validate_data(
+        cls,
+        data: Mapping[str, Any],
+        *,
+        operation: str,
+    ) -> dict[str, Any]:
+        values = dict(data)
+
+        unknown_fields = set(values) - cls._MODEL_COLUMNS
+        if unknown_fields:
+            fields = ", ".join(sorted(unknown_fields))
+            raise ValueError(
+                f"Unknown fields for SecurityEvent {operation}: {fields}"
+            )
+
+        protected_fields = set(values) & cls._PROTECTED_FIELDS
+        if protected_fields:
+            fields = ", ".join(sorted(protected_fields))
+            raise ValueError(
+                f"Protected fields cannot be modified: {fields}"
+            )
+
+        return values
+
+    @staticmethod
+    def _escape_like(value: str) -> str:
+        """Escape LIKE wildcards while preserving literal search semantics."""
+        return (
+            value.replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
 
     def _build_filters(
         self,
+        *,
         tenant_id: UUID,
-        **filters,
+        filters: Mapping[str, Any],
     ) -> list[ColumnElement[bool]]:
-        criteria = [SecurityEvent.tenant_id == tenant_id]
-        
-        # Equality mapping
-        mapping = {
-            "severity": SecurityEvent.severity,
-            "event_type": SecurityEvent.event_type,
-            "source": SecurityEvent.source,
-            "hostname": SecurityEvent.hostname,
-        }
-        for key, column in mapping.items():
-            if value := filters.get(key):
+        criteria: list[ColumnElement[bool]] = [
+            SecurityEvent.tenant_id == tenant_id,
+        ]
+
+        for key, column in self._FILTERABLE_FIELDS.items():
+            value = filters.get(key)
+
+            if value is not None and value != "":
                 criteria.append(column == value)
 
-        if q := filters.get("q"):
-            pattern = f"%{q.strip()}%"
-            criteria.append(or_(
-                SecurityEvent.source.ilike(pattern),
-                SecurityEvent.source_type.ilike(pattern),
-                SecurityEvent.event_type.ilike(pattern),
-                SecurityEvent.hostname.ilike(pattern),
-                SecurityEvent.user_identifier.ilike(pattern),
-                SecurityEvent.message.ilike(pattern),
-            ))
+        query = filters.get("q")
+        if isinstance(query, str):
+            query = query.strip()
 
-        # Range mapping
-        if start_time := filters.get("start_time"):
-            criteria.append(SecurityEvent.timestamp >= start_time)
-        if end_time := filters.get("end_time"):
-            criteria.append(SecurityEvent.timestamp <= end_time)
+        if query:
+            pattern = f"%{self._escape_like(query)}%"
+
+            criteria.append(
+                or_(
+                    *(
+                        column.ilike(pattern, escape="\\")
+                        for column in self._SEARCHABLE_FIELDS
+                    )
+                )
+            )
+
+        start_time = filters.get("start_time")
+        end_time = filters.get("end_time")
+
+        if (
+            start_time is not None
+            and end_time is not None
+            and start_time > end_time
+        ):
+            raise ValueError("start_time must be earlier than end_time")
+
+        if start_time is not None:
+            criteria.append(SecurityEvent.event_time >= start_time)
+
+        if end_time is not None:
+            criteria.append(SecurityEvent.event_time <= end_time)
 
         return criteria
 
-    def get(self, *, tenant_id: UUID, event_id: UUID) -> SecurityEvent | None:
-        return self.db.scalar(
-            select(SecurityEvent).where(
-                SecurityEvent.id == event_id,
-                SecurityEvent.tenant_id == tenant_id,
-            )
+    # ------------------------------------------------------------------
+    # Get
+    # ------------------------------------------------------------------
+
+    def get(
+        self,
+        *,
+        tenant_id: UUID,
+        event_id: UUID,
+    ) -> SecurityEvent | None:
+        statement = select(SecurityEvent).where(
+            SecurityEvent.id == event_id,
+            SecurityEvent.tenant_id == tenant_id,
         )
 
-    def list(self, *, tenant_id: UUID, limit: int = 50, offset: int = 0, **filters) -> list[SecurityEvent]:
-        query = (
+        return self.db.scalar(statement)
+
+    # ------------------------------------------------------------------
+    # List
+    # ------------------------------------------------------------------
+
+    def list(
+        self,
+        *,
+        tenant_id: UUID,
+        limit: int = 50,
+        offset: int = 0,
+        **filters: Any,
+    ) -> list[SecurityEvent]:
+        if limit < 1:
+            raise ValueError("limit must be greater than zero")
+
+        if offset < 0:
+            raise ValueError("offset must be greater than or equal to zero")
+
+        statement = (
             select(SecurityEvent)
-            .where(*self._build_filters(tenant_id, **filters))
-            .order_by(SecurityEvent.timestamp.desc(), SecurityEvent.id.desc())
+            .where(
+                *self._build_filters(
+                    tenant_id=tenant_id,
+                    filters=filters,
+                )
+            )
+            .order_by(
+                SecurityEvent.event_time.desc(),
+                SecurityEvent.id.desc(),
+            )
             .limit(limit)
             .offset(offset)
         )
-        return self.db.scalars(query).all()
 
-    def count(self, *, tenant_id: UUID, **filters) -> int:
-        query = select(func.count(SecurityEvent.id)).where(*self._build_filters(tenant_id, **filters))
-        return self.db.scalar(query) or 0
+        return list(self.db.scalars(statement).all())
 
-    def create(self, *, tenant_id: UUID, data: dict) -> SecurityEvent:
-        event = SecurityEvent(tenant_id=tenant_id, **data)
+    # ------------------------------------------------------------------
+    # Count
+    # ------------------------------------------------------------------
+
+    def count(
+        self,
+        *,
+        tenant_id: UUID,
+        **filters: Any,
+    ) -> int:
+        statement = select(func.count()).select_from(SecurityEvent).where(
+            *self._build_filters(
+                tenant_id=tenant_id,
+                filters=filters,
+            )
+        )
+
+        return int(self.db.scalar(statement) or 0)
+
+    # ------------------------------------------------------------------
+    # Create
+    # ------------------------------------------------------------------
+
+    def create(
+        self,
+        *,
+        tenant_id: UUID,
+        data: Mapping[str, Any],
+    ) -> SecurityEvent:
+        values = self._validate_data(data, operation="create")
+
+        event = SecurityEvent(
+            tenant_id=tenant_id,
+            **values,
+        )
+
         return self._commit_and_return(event)
 
-    def create_many(self, *, tenant_id: UUID, data: list[dict]) -> list[SecurityEvent]:
-        events = [SecurityEvent(tenant_id=tenant_id, **item) for item in data]
+    # ------------------------------------------------------------------
+    # Bulk create
+    # ------------------------------------------------------------------
+
+    def create_many(
+        self,
+        *,
+        tenant_id: UUID,
+        data: list[Mapping[str, Any]],
+    ) -> list[SecurityEvent]:
+        if not data:
+            return []
+
+        events = [
+            SecurityEvent(
+                tenant_id=tenant_id,
+                **self._validate_data(item, operation="create"),
+            )
+            for item in data
+        ]
+
         try:
             self.db.add_all(events)
             self.db.commit()
-            # Removed the refresh() loop to prevent N+1 database roundtrips.
+
+            for event in events:
+                self.db.refresh(event)
+
             return events
+
         except Exception:
             self.db.rollback()
             raise
 
-    def _commit_and_return(self, obj: SecurityEvent) -> SecurityEvent:
-        try:
-            self.db.add(obj)
-            self.db.commit()
-            self.db.refresh(obj)
-            return obj
-        except Exception:
-            self.db.rollback()
-            raise
+    # ------------------------------------------------------------------
+    # Update
+    # ------------------------------------------------------------------
 
-    def update(self, *, tenant_id: UUID, event_id: UUID, data: dict) -> SecurityEvent | None:
-        event = self.get(tenant_id=tenant_id, event_id=event_id)
+    def update(
+        self,
+        *,
+        tenant_id: UUID,
+        event_id: UUID,
+        data: Mapping[str, Any],
+    ) -> SecurityEvent | None:
+        values = self._validate_data(data, operation="update")
+
+        if not values:
+            raise ValueError("update data must contain at least one field")
+
+        event = self.get(
+            tenant_id=tenant_id,
+            event_id=event_id,
+        )
+
         if event is None:
             return None
-        for key, value in data.items():
-            setattr(event, key, value)
+
+        for field, value in values.items():
+            setattr(event, field, value)
+
         return self._commit_and_return(event)
 
-    def delete(self, *, tenant_id: UUID, event_id: UUID) -> bool:
+    # ------------------------------------------------------------------
+    # Delete
+    # ------------------------------------------------------------------
+
+    def delete(
+        self,
+        *,
+        tenant_id: UUID,
+        event_id: UUID,
+    ) -> bool:
+        statement = delete(SecurityEvent).where(
+            SecurityEvent.id == event_id,
+            SecurityEvent.tenant_id == tenant_id,
+        )
+
         try:
-            stmt = delete(SecurityEvent).where(
-                SecurityEvent.id == event_id, 
-                SecurityEvent.tenant_id == tenant_id
-            )
-            result = self.db.execute(stmt)
+            result = self.db.execute(statement)
             self.db.commit()
-            return bool(result.rowcount)
+            return bool(result.rowcount and result.rowcount > 0)
+
+        except Exception:
+            self.db.rollback()
+            raise
+
+    # ------------------------------------------------------------------
+    # Transaction helper
+    # ------------------------------------------------------------------
+
+    def _commit_and_return(
+        self,
+        event: SecurityEvent,
+    ) -> SecurityEvent:
+        try:
+            self.db.add(event)
+            self.db.commit()
+            self.db.refresh(event)
+            return event
+
         except Exception:
             self.db.rollback()
             raise

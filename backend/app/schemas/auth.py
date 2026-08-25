@@ -1,7 +1,9 @@
 from __future__ import annotations
-
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+class BaseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
 class TokenIntrospectionResult(BaseModel):
     sub: str
@@ -9,26 +11,27 @@ class TokenIntrospectionResult(BaseModel):
     name: str | None = None
     roles: list[str] = Field(default_factory=list)
 
-class UserOut(BaseModel):
+class UserOut(BaseSchema):
     id: UUID
     email: str | None = None
     name: str | None = None
 
-class TenantRoleOut(BaseModel):
+class TenantRoleOut(BaseSchema):
     id: UUID | None = None
     key: str | None = None
     name: str | None = None
 
-class MembershipOut(BaseModel):
+class MembershipOut(BaseSchema):
     tenant_id: UUID
+    tenant_name: str | None = None
     role: str
     tenant_role: TenantRoleOut | None = None
     permissions: list[str] = Field(default_factory=list)
-    is_default: bool
+    is_default: bool = False
 
-class MeResponse(BaseModel):
+class MeResponse(BaseSchema):
     user: UserOut
-    memberships: list[MembershipOut]
+    memberships: list[MembershipOut] = Field(default_factory=list)
     default_tenant_id: UUID | None = None
     permissions: list[str] = Field(default_factory=list)
 

@@ -6,7 +6,7 @@ import { Sidebar } from '@/components/shell/sidebar'
 import { Topbar } from '@/components/soc/topbar'
 
 export type AuthUser = {
-  id: number
+  id: string
   name?: string | null
   email?: string | null
   role?: string | null

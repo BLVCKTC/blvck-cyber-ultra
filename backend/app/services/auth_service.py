@@ -4,20 +4,19 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.core.security.jwt_verify import verify_keycloak_access_token
 from app.db.models.enums import MembershipRole
 from app.db.models.membership import Membership
-from app.db.models.tenant_role import TenantRole
-from app.db.models.tenant_role_permission import TenantRolePermission
 from app.db.repositories.membership_repo import MembershipRepo
 from app.db.repositories.user_repo import UserRepo
+from app.schemas.auth import MeResponse, MembershipOut, UserOut
 from app.services.pkce_service import PKCEService
 from app.services.token_service import TokenService
 
-# Centralized mapping to remove redundancy between extraction and mapping methods
-ROLE_MAPPING = {
+
+ROLE_MAPPING: dict[str, MembershipRole] = {
     "OWNER": MembershipRole.OWNER,
     "ADMIN": MembershipRole.ADMIN,
     "SOC_MANAGER": MembershipRole.SOC_MANAGER,
@@ -25,6 +24,7 @@ ROLE_MAPPING = {
     "INCIDENT_RESPONDER": MembershipRole.INCIDENT_RESPONDER,
     "VIEWER": MembershipRole.VIEWER,
 }
+
 
 class AuthService:
     def __init__(self, db: Session):
@@ -38,12 +38,12 @@ class AuthService:
         return self.pkce.create_login_request(tenant_id)
 
     async def _process_token_response(self, token_response: dict[str, Any]) -> tuple[dict[str, Any], Any, dict[str, Any]]:
-        """Internal helper to handle token verification and user retrieval for both login and refresh."""
         access_token = token_response.get("access_token")
         if not access_token:
             raise HTTPException(status_code=400, detail="missing_access_token")
 
         claims = verify_keycloak_access_token(access_token)
+
         id_token = token_response.get("id_token")
         if id_token:
             await self.token_service.verify_id_token(id_token, access_token)
@@ -56,43 +56,35 @@ class AuthService:
         tenant_id = attempt.get("tenant_id")
 
         token_response = await self.token_service.exchange_authorization_code(
-            code=code, code_verifier=attempt["code_verifier"]
+            code=code, 
+            code_verifier=attempt["code_verifier"]
         )
-        
+
         token_data, user, claims = await self._process_token_response(token_response)
 
-        memberships = self.membership_repo.list_for_user(user.id)
-        membership = (
-            self.membership_repo.get_membership(user_id=user.id, tenant_id=tenant_id)
-            if tenant_id
-            else None
-        )
+        membership = None
+        if tenant_id:
+            membership = self.membership_repo.get_membership(user_id=user.id, tenant_id=tenant_id)
+            if not membership:
+                raise HTTPException(status_code=403, detail="not_a_member")
+            
+            membership = self.sync_keycloak_role(user_id=user.id, tenant_id=tenant_id, claims=claims)
 
-        if tenant_id and not membership:
-            raise HTTPException(status_code=403, detail="not_a_member")
-
-        selected = membership or next(
-            (item for item in memberships if item.is_default),
-            memberships[0] if memberships else None,
-        )
-
-        if tenant_id and selected:
-            self.sync_keycloak_role(user_id=user.id, tenant_id=selected.tenant_id, claims=claims)
-
-        default = selected
+        if not membership:
+            membership = self.get_default_membership(user.id)
 
         return {
             **token_data,
             "user": user,
-            "tenant_id": selected.tenant_id if selected else None,
-            "default_tenant_id": default.tenant_id if default else None,
+            "tenant_id": membership.tenant_id if membership else None,
+            "default_tenant_id": membership.tenant_id if membership else None,
             "token_type": token_data.get("token_type", "Bearer"),
         }
 
     async def refresh_session(self, refresh_token: str) -> dict[str, Any]:
         token_response = await self.token_service.refresh_access_token(refresh_token)
         token_data, user, _ = await self._process_token_response(token_response)
-
+        
         default = self.get_default_membership(user.id)
 
         return {
@@ -119,40 +111,52 @@ class AuthService:
 
         return user
 
-    def sync_keycloak_role(self, *, user_id: UUID, tenant_id: UUID, claims: dict[str, Any]):
-        # Extract and map role in one step using the constant map
+    def sync_keycloak_role(self, *, user_id: UUID, tenant_id: UUID, claims: dict[str, Any]) -> Membership:
         roles = (claims.get("realm_access") or {}).get("roles") or []
-        role_key = next((r.upper() for r in roles if r.upper() in ROLE_MAPPING), "VIEWER")
+        normalized_roles = {str(role).upper() for role in roles}
+        
+        role_key = next((role for role in normalized_roles if role in ROLE_MAPPING), "VIEWER")
         membership_role = ROLE_MAPPING[role_key]
 
         tenant_role = self.membership_repo.get_tenant_role(tenant_id=tenant_id, role_key=role_key)
         if not tenant_role:
-            raise HTTPException(status_code=500, detail=f"Tenant role {role_key} not configured for tenant {tenant_id}")
+            raise HTTPException(status_code=500, detail=f"Role {role_key} not configured for tenant {tenant_id}")
 
         membership = self.membership_repo.get_membership(user_id=user_id, tenant_id=tenant_id)
+
         if membership:
+            if membership.role != membership_role or membership.tenant_role_id != tenant_role.id:
+                membership = self.membership_repo.update_membership_role(
+                    membership=membership, 
+                    role=membership_role, 
+                    tenant_role_id=tenant_role.id
+                )
             return membership
 
         return self.membership_repo.create(
-            user_id=user_id, tenant_id=tenant_id, role=membership_role, tenant_role_id=tenant_role.id, is_default=False
+            user_id=user_id,
+            tenant_id=tenant_id,
+            role=membership_role,
+            tenant_role_id=tenant_role.id,
+            is_default=False,
         )
 
-    def get_memberships(self, user_id: UUID):
+    def get_memberships(self, user_id: UUID) -> list[Membership]:
         return self.membership_repo.list_for_user(user_id)
 
-    def get_default_membership(self, user_id: UUID):
+    def get_default_membership(self, user_id: UUID) -> Membership | None:
         memberships = self.get_memberships(user_id)
         if not memberships:
             return None
         return next((m for m in memberships if m.is_default), memberships[0])
 
-    def set_default_tenant(self, user_id: UUID, tenant_id: UUID):
-        if not self.membership_repo.get_membership(user_id, tenant_id):
+    def set_default_tenant(self, user_id: UUID, tenant_id: UUID) -> None:
+        if not self.membership_repo.get_membership(user_id=user_id, tenant_id=tenant_id):
             raise HTTPException(status_code=403, detail="not_a_member")
-        self.membership_repo.set_default_tenant(user_id, tenant_id)
+        
+        self.membership_repo.set_default(user_id=user_id, tenant_id=tenant_id)
 
-    def get_permissions(self, membership: Membership) -> list[str]:
-        """Unified permission extraction used by both MeResponse and general lookups."""
+    def get_permissions(self, membership: Membership | None) -> list[str]:
         if not membership or not membership.tenant_role:
             return []
         return [p.permission.key for p in membership.tenant_role.permissions if p.permission]
@@ -160,38 +164,30 @@ class AuthService:
     def get_user_permissions(self, user_id: UUID, tenant_id: UUID | None) -> list[str]:
         if not tenant_id:
             return []
-        
-        membership = (
-            self.db.query(Membership)
-            .options(joinedload(Membership.tenant_role).joinedload(TenantRole.permissions).joinedload(TenantRolePermission.permission))
-            .filter(Membership.user_id == user_id, Membership.tenant_id == tenant_id)
-            .first()
-        )
-        return self.get_permissions(membership)
+        return self.get_permissions(self.membership_repo.get_membership(user_id=user_id, tenant_id=tenant_id))
 
-    def build_me_response(self, user):
-        # Optimization: Fetch memberships once and derive the default from that list
+    def build_me_response(self, user: Any) -> dict[str, Any]:
         memberships = self.get_memberships(user.id)
-        default_membership = next((m for m in memberships if m.is_default), memberships[0] if memberships else None)
+        default = next((m for m in memberships if m.is_default), memberships[0] if memberships else None)
 
-        return {
-            "user": {"id": user.id, "email": user.email, "name": user.name},
-            "memberships": [
-                {
-                    "tenant_id": m.tenant_id,
-                    "role": m.role.value,
-                    "tenant_role": {
-                        "id": m.tenant_role.id if m.tenant_role else None,
-                        "key": m.tenant_role.key if m.tenant_role else None,
-                        "name": m.tenant_role.name if m.tenant_role else None,
-                    },
-                    "permissions": self.get_permissions(m),
-                    "is_default": m.is_default,
-                }
-                for m in memberships
-            ],
-            "default_tenant_id": default_membership.tenant_id if default_membership else None,
-        }
+        membership_data = [
+            MembershipOut(
+                tenant_id=m.tenant_id,
+                tenant_name= m.tenant.name if m.tenant is not None else None ,
+                role=m.role.value if hasattr(m.role, "value") else str(m.role),
+                tenant_role=m.tenant_role,
+                permissions=self.get_permissions(m),
+                is_default=bool(m.is_default),
+            )
+            for m in memberships
+        ]
 
-    def logout(self):
+        return MeResponse(
+            user=UserOut.model_validate(user),
+            memberships=membership_data,
+            default_tenant_id=default.tenant_id if default else None,
+            permissions=self.get_permissions(default),
+        ).model_dump()
+
+    def logout(self) -> dict[str, bool]:
         return {"ok": True}

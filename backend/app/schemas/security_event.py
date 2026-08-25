@@ -1,103 +1,209 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import (
-    BaseModel, 
-    ConfigDict, 
-    Field, 
-    IPvAnyAddress, 
-    field_validator
+    BaseModel,
+    ConfigDict,
+    Field,
+    IPvAnyAddress,
+    field_validator,
 )
-from typing_extensions import Literal
 
 
-Severity = Literal["low", "medium", "high", "critical"]
+# Using Literals here ensures the OpenAPI/Swagger docs show a dropdown 
+# of allowed values, mirroring the DB CheckConstraints.
+SecurityEventSeverity = Literal[
+    "info",
+    "low",
+    "medium",
+    "high",
+    "critical",
+]
+
+SecurityEventStatus = Literal[
+    "open",
+    "processing",
+    "processed",
+    "failed",
+    "suppressed",
+]
 
 
 class SecurityEventBase(BaseModel):
-    """Common fields shared between create and read schemas."""
+    """
+    Common security-event fields.
+    Mirrors the SecurityEvent database model.
+    """
 
-    timestamp: datetime
-    source: str = Field(min_length=1, max_length=255)
-    source_type: str = Field(min_length=1, max_length=100)
-    event_type: str = Field(min_length=1, max_length=150)
-    severity: Severity = "low"
-    status: str = Field(default="open", min_length=1, max_length=50)
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    # --- Source Identity & Deduplication ---
+    source_event_id: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Stable identifier supplied by the originating system.",
+    )
+    event_fingerprint: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Deterministic hash used for deduplication when source_event_id is missing.",
+    )
+
+    # --- Correlation ---
+    correlation_id: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Links related events into a single attack timeline.",
+    )
+    parent_event_id: UUID | None = Field(
+        default=None,
+        description="Reference to the causal parent event.",
+    )
+
+    # --- Timing ---
+    event_time: datetime = Field(
+        ..., 
+        description="Time the event occurred at the source. Must be timezone-aware.",
+    )
+
+    # --- Classification ---
+    schema_version: int = Field(
+        default=1,
+        ge=1,
+        description="Normalized event schema version.",
+    )
+    event_category: str | None = Field(
+        default=None,
+        max_length=100,
+        description="High-level category (e.g., 'Authentication', 'Network').",
+    )
+    source: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=255, 
+        description="The security product (e.g., 'CrowdStrike', 'Okta')."
+    )
+    source_type: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=100, 
+        description="Product type (e.g., 'EDR', 'IdP', 'Firewall')."
+    )
+    event_type: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=150, 
+        description="The normalized event action (e.g., 'process_created')."
+    )
+    severity: SecurityEventSeverity = Field(
+        default="low",
+    )
+    status: SecurityEventStatus = Field(
+        default="open",
+    )
+    action: str | None = Field(
+        default=None,
+        max_length=150,
+        description="Observed action (e.g., 'blocked', 'allowed').",
+    )
+    risk_score: int | None = Field(
+        default=None,
+        ge=0,
+        le=100,
+        description="Risk score normalized from 0 to 100.",
+    )
+
+    # --- Network / Endpoint Context ---
+    # IPvAnyAddress validates both IPv4 and IPv6, mapping perfectly to Postgres INET
+    source_ip: IPvAnyAddress | None = Field(default=None)
+    destination_ip: IPvAnyAddress | None = Field(default=None)
+    source_port: int | None = Field(default=None, ge=0, le=65535)
+    destination_port: int | None = Field(default=None, ge=0, le=65535)
+    protocol: str | None = Field(default=None, max_length=32)
     hostname: str | None = Field(default=None, max_length=255)
-    
-    # Validates IPv4/IPv6 on input
-    source_ip: IPvAnyAddress | None = None
-    destination_ip: IPvAnyAddress | None = None
-
     user_identifier: str | None = Field(default=None, max_length=255)
-    message: str | None = None
-    raw_event: dict[str, Any] = Field(default_factory=dict)
-    normalized_data: dict[str, Any] = Field(default_factory=dict)
+    process_name: str | None = Field(default=None, max_length=255)
+    process_id: int | None = Field(default=None, ge=0)
 
-    model_config = ConfigDict(extra="forbid")
+    # --- MITRE ATT&CK ---
+    mitre_tactic: str | None = Field(default=None, max_length=150)
+    mitre_technique: str | None = Field(default=None, max_length=150)
+    mitre_technique_id: str | None = Field(default=None, max_length=50)
 
-    @field_validator("timestamp")
+    # --- Telemetry ---
+    message: str | None = Field(default=None)
+    raw_event: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Immutable original log for forensic auditing.",
+    )
+    normalized_data: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Normalized ECS-style data for detection engines.",
+    )
+    event_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Internal enrichment and platform tags.",
+    )
+
+    @field_validator("event_time")
     @classmethod
-    def ensure_timezone_aware(cls, v: datetime) -> datetime:
-        """Reject naive datetimes to ensure unambiguous telemetry."""
-        if v.tzinfo is None:
-            raise ValueError("timestamp must be timezone-aware (e.g., 2026-08-20T10:47:34Z)")
-        return v
+    def validate_event_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("event_time must be timezone-aware (e.g., UTC)")
+        return value
 
 
 class SecurityEventCreate(SecurityEventBase):
     """
-    Payload accepted from ingestion clients.
-    tenant_id is strictly omitted to prevent client-side override.
+    Payload for event ingestion.
+    tenant_id is omitted as it is derived from the auth context.
     """
-    model_config = ConfigDict(extra="forbid")
+    pass
 
 
 class SecurityEventRead(SecurityEventBase):
     """
-    Schema for API responses. 
-    IPs are cast to strings for Next.js and SIEM compatibility.
+    Schema for API responses.
     """
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
 
     id: UUID
     tenant_id: UUID
+    ingested_at: datetime
     created_at: datetime
-
-    # Overriding types to str ensures serialization is "192.168.1.50" 
-    # instead of an IPv4Address object representation.
-    source_ip: str | None = None
-    destination_ip: str | None = None
 
 
 class SecurityEventList(BaseModel):
+    """
+    Paginated response for security events.
+    """
     model_config = ConfigDict(extra="forbid")
 
     items: list[SecurityEventRead]
     total: int = Field(ge=0)
-    limit: int = Field(gt=0)
+    limit: int = Field(ge=1, le=500)
     offset: int = Field(ge=0)
 
 
 class SecurityEventUpdate(BaseModel):
     """
-    Schema for updating an existing security event.
-    All fields are optional to allow partial updates (PATCH).
+    Restricted update schema.
+    Telemetry is immutable; only processing status and metadata can be mutated.
     """
-    status: str | None = Field(default=None, min_length=1, max_length=50)
-    source: str | None = Field(default=None, min_length=1, max_length=255)
-    source_type: str | None = Field(default=None, min_length=1, max_length=100)
-    event_type: str | None = Field(default=None, min_length=1, max_length=150)
-    severity: Severity | None = None
-    hostname: str | None = Field(default=None, max_length=255)
-    source_ip: IPvAnyAddress | None = None
-    destination_ip: IPvAnyAddress | None = None
-    user_identifier: str | None = Field(default=None, max_length=255)
-    message: str | None = None
-    raw_event: dict[str, Any] | None = None
-    normalized_data: dict[str, Any] | None = None
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
 
-    model_config = ConfigDict(extra="forbid")
+    status: SecurityEventStatus | None = None
+    event_metadata: dict[str, Any] | None = None

@@ -9,193 +9,127 @@ import {
   Users,
   CreditCard,
   Activity,
+  LucideIcon,
 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-const mockOrganization = {
-  id: 'organization',
-  name: 'BLVCK Cyber Technologies',
-  industry: 'Cybersecurity',
-  website: 'https://blvckcyber.com',
-  email: 'admin@blvckcyber.com',
-  plan: 'Enterprise',
-  status: 'Active',
-  createdAt: '06 August 2026',
-
-  securityScore: 94,
-  members: 42,
-
-  location: 'South Africa',
-
-  features: [
-    'AI Threat Detection',
-    'Threat Intelligence',
-    'Digital Forensics',
-    'Security Monitoring',
-    'Compliance Management',
-  ],
+export type Organization = {
+  id: string
+  name: string
+  slug: string
+  website: string | null
+  email: string | null
+  industry: string | null
+  location: string | null
+  plan: string
+  status: string
+  securityScore: number | null
+  features: string[]
+  created_at: string
+  updated_at: string
 }
 
-export function OrganizationModule() {
+interface OrganizationModuleProps {
+  organization: Organization
+}
+
+export function OrganizationModule({ organization }: OrganizationModuleProps) {
+  const createdDate = new Date(organization.created_at).toLocaleDateString(
+    'en-GB',
+    {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    },
+  )
+
+  const stats = [
+    { label: 'Members', value: '—', icon: Users },
+    {
+      label: 'Security Score',
+      value: `${organization.securityScore ?? 0}%`,
+      icon: ShieldCheck,
+    },
+    { label: 'Subscription', value: organization.plan, icon: CreditCard },
+    { label: 'Status', value: organization.status, icon: Activity },
+  ]
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
-        <div
-          className="
-            flex h-12 w-12
-            items-center justify-center
-            rounded-xl
-            bg-primary/10
-          "
-        >
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
           <Building2 className="h-6 w-6 text-primary" />
         </div>
-
         <div>
           <h1 className="text-2xl font-bold">Organization</h1>
-
           <p className="text-sm text-muted-foreground">
             Manage your tenant profile and organization settings
           </p>
         </div>
       </div>
 
-      {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <Users className="h-5 w-5 text-primary" />
-
+        {stats.map(({ label, value, icon: Icon }) => (
+          <Card key={label}>
+            <CardContent className="p-5 flex items-center gap-3">
+              <Icon className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-xs text-muted-foreground">Members</p>
-
-                <p className="text-xl font-bold">{mockOrganization.members}</p>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-xl font-bold">{value}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5 text-primary" />
-
-              <div>
-                <p className="text-xs text-muted-foreground">Security Score</p>
-
-                <p className="text-xl font-bold">
-                  {mockOrganization.securityScore}%
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <CreditCard className="h-5 w-5 text-primary" />
-
-              <div>
-                <p className="text-xs text-muted-foreground">Subscription</p>
-
-                <p className="text-xl font-bold">{mockOrganization.plan}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <Activity className="h-5 w-5 text-primary" />
-
-              <div>
-                <p className="text-xs text-muted-foreground">Status</p>
-
-                <p className="text-xl font-bold">{mockOrganization.status}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Organization Details */}
       <Card>
         <CardHeader>
           <CardTitle>Organization Details</CardTitle>
         </CardHeader>
-
         <CardContent className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <Info
-              icon={<Building2 />}
+              icon={Building2}
               label="Organization Name"
-              value={mockOrganization.name}
+              value={organization.name}
             />
-
-            <Info
-              icon={<Globe />}
-              label="Website"
-              value={mockOrganization.website}
-            />
-
-            <Info
-              icon={<Mail />}
-              label="Email"
-              value={mockOrganization.email}
-            />
+            <Info icon={Globe} label="Website" value={organization.website} />
+            <Info icon={Mail} label="Email" value={organization.email} />
           </div>
-
           <div className="space-y-4">
+            <Info icon={CalendarDays} label="Created" value={createdDate} />
             <Info
-              icon={<CalendarDays />}
-              label="Created"
-              value={mockOrganization.createdAt}
-            />
-
-            <Info
-              icon={<Building2 />}
+              icon={Building2}
               label="Industry"
-              value={mockOrganization.industry}
+              value={organization.industry}
             />
-
-            <Info
-              icon={<Globe />}
-              label="Location"
-              value={mockOrganization.location}
-            />
+            <Info icon={Globe} label="Location" value={organization.location} />
           </div>
         </CardContent>
       </Card>
 
-      {/* Enabled Features */}
       <Card>
         <CardHeader>
           <CardTitle>Enabled Security Capabilities</CardTitle>
         </CardHeader>
-
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {mockOrganization.features.map((feature) => (
-              <span
-                key={feature}
-                className="
-                  rounded-full
-                  border
-                  px-3
-                  py-1
-                  text-xs
-                  font-medium
-                "
-              >
-                {feature}
-              </span>
-            ))}
-          </div>
+          {organization.features?.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {organization.features.map((feature) => (
+                <span
+                  key={feature}
+                  className="rounded-full border px-3 py-1 text-xs font-medium"
+                >
+                  {feature}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No security capabilities configured.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -203,22 +137,20 @@ export function OrganizationModule() {
 }
 
 function Info({
-  icon,
+  icon: Icon,
   label,
   value,
 }: {
-  icon: React.ReactNode
+  icon: LucideIcon
   label: string
-  value: string
+  value: string | null
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="text-muted-foreground">{icon}</div>
-
+      <Icon className="h-4 w-4 text-muted-foreground" />
       <div>
         <p className="text-xs text-muted-foreground">{label}</p>
-
-        <p className="text-sm font-medium">{value}</p>
+        <p className="text-sm font-medium">{value ?? 'Not configured'}</p>
       </div>
     </div>
   )

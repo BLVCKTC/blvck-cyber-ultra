@@ -5,157 +5,110 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   type ReactNode,
 } from 'react'
 
 import { API_URL, logoutUrl } from '@/lib/api/config'
 
+export type TenantRole = {
+  id: string | null
+  key: string | null
+  name: string | null
+}
+
 export type Membership = {
-  id?: string
-
   tenant_id: string
-
-  tenant_name?: string | null
-
   role: string
-
-  tenant_role?: {
-    id: string | number | null
-
-    key: string | null
-
-    name: string | null
-  } | null
-
+  tenant_role: TenantRole | null
   permissions: string[]
-
   is_default: boolean
 }
 
 export type User = {
   id: string
-
-  email: string
-
+  email: string | null
   name: string | null
 }
 
 export type MeResponse = {
   user: User
-
   memberships: Membership[]
-
   default_tenant_id: string | null
+  permissions: string[]
 }
 
-type AuthContextType = {
+type AuthState = {
   user: User | null
-
   memberships: Membership[]
-
   activeTenant: string | null
-
+  permissions: string[]
   loading: boolean
+}
 
+type AuthContextType = AuthState & {
   isAuthenticated: boolean
-
   refreshUser: () => Promise<void>
-
   logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+const INITIAL_STATE: Omit<AuthState, 'loading'> = {
+  user: null,
+  memberships: [],
+  activeTenant: null,
+  permissions: [],
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [state, setState] = useState<AuthState>({
+    ...INITIAL_STATE,
+    loading: true,
+  })
 
-  const [memberships, setMemberships] = useState<Membership[]>([])
-
-  const [activeTenant, setActiveTenant] = useState<string | null>(null)
-
-  const [loading, setLoading] = useState(true)
-
-  async function refreshUser() {
+  const refreshUser = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/auth/me`, {
         method: 'GET',
-
         credentials: 'include',
-
         cache: 'no-store',
-
-        headers: {
-          Accept: 'application/json',
-        },
+        headers: { Accept: 'application/json' },
       })
 
       if (!response.ok) {
-        setUser(null)
-
-        setMemberships([])
-
-        setActiveTenant(null)
-
-        return
+        throw new Error('Authentication failed')
       }
 
       const data: MeResponse = await response.json()
 
-      setUser(data.user)
-
-      setMemberships(data.memberships ?? [])
-
-      setActiveTenant(data.default_tenant_id)
-    } catch {
-      // A failed /auth/me probe (network error, or the backend unreachable)
-      // is treated as "not authenticated" — the same as a 401. This is a
-      // normal condition on the login screen, so we don't raise a scary
-      // error; we simply clear any session state.
-      setUser(null)
-
-      setMemberships([])
-
-      setActiveTenant(null)
+      setState({
+        user: data.user,
+        memberships: data.memberships ?? [],
+        activeTenant: data.default_tenant_id ?? null,
+        permissions: data.permissions ?? [],
+        loading: false,
+      })
+    } catch (error) {
+      setState({ ...INITIAL_STATE, loading: false })
     }
-  }
-
-  useEffect(() => {
-    refreshUser().finally(() => {
-      setLoading(false)
-    })
   }, [])
 
-  async function logout() {
-    // 1. Clear client-side auth state immediately so no stale authenticated
-    //    UI can be rendered while the browser navigates away. This also
-    //    prevents returning to a protected page via stale React state.
-    setUser(null)
-    setMemberships([])
-    setActiveTenant(null)
+  useEffect(() => {
+    refreshUser()
+  }, [refreshUser])
 
-    // 2. Hand control to the backend's redirect-based logout. A full browser
-    //    navigation is required (NOT fetch) so the backend + Keycloak 302
-    //    redirect chain can complete and every session cookie is cleared
-    //    server-side. Keycloak ultimately redirects back to /login, where
-    //    GET /auth/me returns 401 and the login screen is shown.
+  const logout = useCallback(async () => {
+    setState({ ...INITIAL_STATE, loading: false })
     window.location.href = logoutUrl()
-  }
+  }, [])
 
   return (
     <AuthContext.Provider
       value={{
-        user,
-
-        memberships,
-
-        activeTenant,
-
-        loading,
-
-        isAuthenticated: !!user,
-
+        ...state,
+        isAuthenticated: !!state.user,
         refreshUser,
-
         logout,
       }}
     >
@@ -166,10 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-
   if (!context) {
     throw new Error('useAuth must be used inside AuthProvider')
   }
-
   return context
 }
