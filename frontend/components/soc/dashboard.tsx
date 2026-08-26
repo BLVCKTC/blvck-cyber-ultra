@@ -16,6 +16,7 @@ import { ThreatIntel } from './threat-intel'
 import { AlertsPanel } from './alerts-panel'
 import { ReportsPanel } from './reports-panel'
 import { AIAssistant } from './ai-assistant'
+import { LiveOperations } from './live-operations'
 
 /*
   BLVCK SHIELD FEATURES MERGED HERE
@@ -107,6 +108,8 @@ lg:p-6
               title="Security Operations Center"
               sub="Unified BLVCK CYBER + BLVCK SHIELD AI security platform"
             />
+
+            <LiveOperations />
 
             <StatCards />
 
