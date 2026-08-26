@@ -7,6 +7,7 @@ from app.api.routes.tenants import router as tenants_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.memberships import router as memberships_router
 from app.api.routes.security_events import router as security_events_router
+from app.api.routes.detection_rules import router as detection_rules_router
 
 from app.core.config import settings
 
@@ -91,6 +92,11 @@ app.include_router(
 
 app.include_router(
     security_events_router,
+    prefix=settings.API_PREFIX,
+)
+
+app.include_router(
+    detection_rules_router,
     prefix=settings.API_PREFIX,
 )
 

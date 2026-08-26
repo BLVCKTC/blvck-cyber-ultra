@@ -3,6 +3,7 @@ from app.db.models.tenant import Tenant
 from app.db.models.membership import Membership
 from app.db.models.pkce_attempt import PKCEAttempt
 from app.db.models.security_event import SecurityEvent
+from app.db.models.detection_rule import DetectionRule
 
 __all__ = [
     "User",
