@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Menu, Bell, Search, Building2 } from 'lucide-react'
+import { Menu, Bell, Building2 } from 'lucide-react'
+import { GlobalSearch } from '@/components/shell/global-search'
 import { useTenant } from '@/components/providers/tenant-provider'
 import type { AuthUser } from './shell'
 
@@ -52,14 +53,9 @@ export function Topbar({
         </span>
       </div>
 
-      {/* Search */}
-      <div className="relative ml-auto hidden max-w-sm flex-1 md:block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="search"
-          placeholder="Search alerts, assets, CVEs, IOCs…"
-          className="h-9 w-full rounded-md border border-border bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
-        />
+      {/* Global investigation search */}
+      <div className="relative ml-auto hidden flex-1 md:block">
+        <GlobalSearch />
       </div>
 
       <div className="ml-auto flex items-center gap-3 md:ml-0">

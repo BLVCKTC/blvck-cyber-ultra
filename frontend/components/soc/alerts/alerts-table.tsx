@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+import { InvestigationDrawer } from '@/components/soc/investigation-drawer'
 import { cn } from '@/lib/utils'
 import {
   alerts as allAlerts,
@@ -161,13 +162,16 @@ export function AlertsTable({ tenantId }: { tenantId: string }) {
                   {a.detectedAt}
                 </td>
                 <td className="px-2 py-3 text-right">
-                  <Link
-                    href={`/dashboard/${tenantId}/alerts/${a.id}`}
-                    aria-label={`Investigate ${a.id}`}
-                    className="inline-flex text-muted-foreground hover:text-foreground"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
+                  <div className="flex items-center justify-end gap-2">
+                    <InvestigationDrawer title={`Investigate ${a.id}`} />
+                    <Link
+                      href={`/dashboard/${tenantId}/alerts/${a.id}`}
+                      aria-label={`Open ${a.id}`}
+                      className="inline-flex text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
