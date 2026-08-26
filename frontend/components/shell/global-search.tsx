@@ -1,21 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Command, Search, ShieldAlert, Activity, Crosshair, Server, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Command, Search, ShieldAlert, Activity, Crosshair, Server, BriefcaseBusiness, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
 const categories = [
-  { label: 'Events', icon: Activity },
-  { label: 'Alerts', icon: ShieldAlert },
-  { label: 'Detection rules', icon: Crosshair },
-  { label: 'Hosts', icon: Server },
+  { label: 'Events', icon: Activity, href: '/security/events' },
+  { label: 'Alerts', icon: ShieldAlert, href: '/security/alerts' },
+  { label: 'Detection rules', icon: Crosshair, href: '/detection/rules' },
+  { label: 'Investigations', icon: BriefcaseBusiness, href: '/dashboard/demo/investigations' },
+  { label: 'Hosts', icon: Server, href: '/dashboard/demo/assets' },
 ]
 
 export function GlobalSearch() {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+
+  function openCategory(href: string) {
+    setOpen(false)
+    setQuery('')
+    router.push(href)
+  }
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -45,7 +54,7 @@ export function GlobalSearch() {
           <div className="flex items-center gap-2 border-b border-border px-4 py-3"><Search className="size-4 text-muted-foreground" /><Input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search events, alerts, hosts, rules…" className="border-0 p-0 shadow-none focus-visible:ring-0" /><button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X className="size-4 text-muted-foreground" /></button></div>
           <div className="flex flex-col gap-2 p-3">
             <p className="px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Search categories</p>
-            {categories.map(({ label, icon: Icon }) => <button key={label} type="button" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm hover:bg-accent"><Icon className="size-4 text-muted-foreground" /><span className="flex-1">{label}</span><Badge variant="outline">{query ? 'Search' : 'Browse'}</Badge></button>)}
+            {categories.map(({ label, icon: Icon, href }) => <button key={label} type="button" onClick={() => openCategory(href)} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm hover:bg-accent"><Icon className="size-4 text-muted-foreground" /><span className="flex-1">{label}</span><Badge variant="outline">{query ? 'Search' : 'Browse'}</Badge></button>)}
             <p className="px-2 pt-2 text-xs text-muted-foreground">Results are scoped to the authenticated tenant and backend permissions.</p>
           </div>
         </DialogContent>
