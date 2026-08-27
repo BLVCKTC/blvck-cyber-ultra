@@ -1,16 +1,18 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import useSWR from 'swr'
 import { Globe, ShieldAlert, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
-  vulnerabilities as allVulns,
   vulnStatusLabel,
   severityRank,
   severityLabel,
   type Severity,
   type VulnStatus,
+  type Vulnerability,
 } from '@/lib/soc/mock'
+import { getVulnerabilities, vulnerabilitiesKey, type ApiVulnerability } from '@/lib/api/vulnerabilities'
 import { SeverityBadge, StatusChip } from '@/components/soc/primitives'
 
 const severityAccent: Record<Severity, string> = {
@@ -30,7 +32,29 @@ const statusTone: Record<VulnStatus, Parameters<typeof StatusChip>[0]['tone']> =
 
 const severityOrder: Severity[] = ['critical', 'high', 'warning', 'info']
 
+function normalizeVulnerability(v: ApiVulnerability): Vulnerability {
+  const metadata = v.metadata_json ?? {}
+  return {
+    id: v.id,
+    cve: v.cve,
+    title: v.title,
+    severity: (['critical', 'high', 'warning', 'info'].includes(v.severity) ? v.severity : 'info') as Severity,
+    cvss: Number(v.cvss_score ?? metadata.cvss ?? 0),
+    epss: Number(metadata.epss ?? 0),
+    status: (['open', 'in_progress', 'remediated', 'accepted'].includes(String(metadata.status)) ? metadata.status : 'open') as VulnStatus,
+    asset: String(metadata.asset ?? 'Unassigned'),
+    assetGroup: String(metadata.assetGroup ?? 'Unclassified'),
+    exploitAvailable: Boolean(metadata.exploitAvailable),
+    exposedToInternet: Boolean(metadata.exposedToInternet),
+    discovered: v.created_at,
+    due: String(metadata.due ?? 'Unscheduled'),
+    fix: String(metadata.fix ?? 'Review remediation guidance'),
+  }
+}
+
 export function VulnerabilitiesView() {
+  const { data, error, isLoading } = useSWR(vulnerabilitiesKey, getVulnerabilities)
+  const allVulns = useMemo(() => (data ?? []).map(normalizeVulnerability), [data])
   const [severity, setSeverity] = useState<Severity | 'all'>('all')
   const [openOnly, setOpenOnly] = useState(true)
   const [query, setQuery] = useState('')
@@ -81,6 +105,9 @@ export function VulnerabilitiesView() {
           severityRank[a.severity] - severityRank[b.severity] || b.epss - a.epss,
       )
   }, [severity, openOnly, query])
+
+  if (isLoading) return <p className="py-10 text-center text-sm text-muted-foreground">Loading tenant vulnerabilities…</p>
+  if (error) return <p className="py-10 text-center text-sm text-destructive">Vulnerability inventory is unavailable.</p>
 
   return (
     <div className="space-y-6">
