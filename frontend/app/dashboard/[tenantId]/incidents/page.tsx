@@ -1,10 +1,10 @@
 import { SectionHeading } from '@/components/soc/shell'
 import { IncidentsTable } from '@/components/soc/incidents/incidents-table'
-import { incidents, type Severity } from '@/lib/soc/mock'
+import type { IncidentSeverity } from '@/lib/api/incidents'
 
 export const metadata = { title: 'Incidents — BLVCK CYBER' }
 
-const severities: Severity[] = ['critical', 'high', 'warning', 'info']
+const severities: IncidentSeverity[] = ['critical', 'high', 'medium', 'low']
 
 export default async function IncidentsPage({
   params,
@@ -17,18 +17,15 @@ export default async function IncidentsPage({
   const { severity } = await searchParams
 
   const initialSeverity =
-    severity && severities.includes(severity as Severity)
-      ? (severity as Severity)
+    severity && severities.includes(severity as IncidentSeverity)
+      ? (severity as IncidentSeverity)
       : 'all'
-
-  const open = incidents.filter((i) => i.status !== 'resolved').length
-  const p1 = incidents.filter((i) => i.priority === 'P1').length
 
   return (
     <div className="space-y-6">
       <SectionHeading
         title="Incidents"
-        sub={`${open} active · ${p1} P1 · consolidated response workspace linking alerts, evidence, and containment actions.`}
+        sub="Tenant-scoped response workspace linking alerts, evidence, and containment actions."
       />
       <IncidentsTable tenantId={tenantId} initialSeverity={initialSeverity} />
     </div>
