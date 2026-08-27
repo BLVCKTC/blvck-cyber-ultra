@@ -201,6 +201,51 @@ class SecurityEventRepository:
 
         return list(self.db.scalars(statement).all())
 
+        # ------------------------------------------------------------------
+    # Idempotency / Deduplication
+    # ------------------------------------------------------------------
+
+    def get_by_source_event_id(
+        self,
+        *,
+        tenant_id: UUID,
+        source: str,
+        source_event_id: str,
+    ) -> SecurityEvent | None:
+        """
+        Find an existing event using the source's stable event identifier.
+
+        Tenant ID and source are always part of the lookup so an event
+        belonging to one tenant or source can never satisfy another
+        tenant's duplicate check.
+        """
+        statement = select(SecurityEvent).where(
+            SecurityEvent.tenant_id == tenant_id,
+            SecurityEvent.source == source,
+            SecurityEvent.source_event_id == source_event_id,
+        )
+
+        return self.db.scalar(statement)
+
+    def get_by_fingerprint(
+        self,
+        *,
+        tenant_id: UUID,
+        fingerprint: str,
+    ) -> SecurityEvent | None:
+        """
+        Find an existing event using its deterministic fingerprint.
+
+        Fingerprints are tenant-scoped to preserve strict multi-tenant
+        isolation.
+        """
+        statement = select(SecurityEvent).where(
+            SecurityEvent.tenant_id == tenant_id,
+            SecurityEvent.event_fingerprint == fingerprint,
+        )
+
+        return self.db.scalar(statement)
+
     # ------------------------------------------------------------------
     # Count
     # ------------------------------------------------------------------

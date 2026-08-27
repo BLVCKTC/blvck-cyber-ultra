@@ -3,10 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime, timezone
 from numbers import Real
-from typing import Any, Mapping
+from typing import Any
 from uuid import UUID
 
 from app.ingestion.models import SecurityEventEnvelope
@@ -192,7 +193,7 @@ _NORMALIZED_FIELDS_EXCLUDED = {
 
 
 class SecurityEventNormalizer:
-    """Convert an authenticated ingestion envelope to the canonical schema."""
+    """Convert an authenticated envelope to the canonical event schema."""
 
     def normalize(
         self,
@@ -210,12 +211,7 @@ class SecurityEventNormalizer:
 def normalize_security_event(
     envelope: SecurityEventEnvelope,
 ) -> SecurityEventCreate:
-    """
-    Convert an authenticated ingestion envelope into a canonical security event.
-
-    The authenticated envelope is authoritative for tenant and source metadata.
-    Vendor-provided tenant identifiers are never trusted.
-    """
+    """Convert an authenticated envelope to a canonical security event."""
 
     payload = envelope.raw_payload
 
@@ -266,6 +262,7 @@ def normalize_security_event(
 
     username = normalized_data.get("username")
     user_id = normalized_data.get("user_id")
+
     user_identifier = (
         str(username)
         if username is not None
@@ -332,6 +329,7 @@ def normalize_security_event(
     }
 
     schema_fields = getattr(SecurityEventCreate, "model_fields", {})
+
     filtered = {
         key: value
         for key, value in normalized.items()
@@ -386,27 +384,27 @@ def generate_event_fingerprint(
     """
     Generate a deterministic SHA-256 fingerprint for event deduplication.
 
-    If source_event_id exists, it is used as the primary source identity.
-    Otherwise, stable normalized attributes and the canonicalized payload
-    are included.
+    Source event IDs are authoritative when available. Otherwise, the
+    fingerprint uses stable event characteristics and excludes the ingestion
+    timestamp.
     """
+
+    source_event_id = envelope.source_event_id or None
 
     identity: dict[str, Any] = {
         "tenant_id": str(envelope.tenant_id),
         "source": envelope.source,
         "source_type": envelope.source_type,
-        "source_event_id": _json_safe(envelope.source_event_id),
+        "source_event_id": _json_safe(source_event_id),
     }
 
-    if envelope.source_event_id is None:
+    if source_event_id is None:
         identity.update(
             {
-                "event_time": event_time.astimezone(
-                    timezone.utc,
-                ).isoformat(),
                 "event_type": event_type,
                 "event_category": event_category,
                 "action": action,
+                "severity": normalized_fields.get("severity"),
                 "hostname": normalized_fields.get("hostname"),
                 "username": normalized_fields.get("username"),
                 "user_id": normalized_fields.get("user_id"),
@@ -420,7 +418,14 @@ def generate_event_fingerprint(
                 "destination_port": normalized_fields.get(
                     "destination_port",
                 ),
-                "file_hash": normalized_fields.get("file_hash"),
+                "protocol": normalized_fields.get("protocol"),
+                "mitre_tactic": normalized_fields.get("mitre_tactic"),
+                "mitre_technique": normalized_fields.get(
+                    "mitre_technique",
+                ),
+                "mitre_technique_id": normalized_fields.get(
+                    "mitre_technique_id",
+                ),
                 "raw_payload": _json_safe(envelope.raw_payload),
             }
         )
@@ -499,10 +504,8 @@ def _coerce_datetime(
 ) -> datetime:
     if value is _UNSET or value is None:
         parsed = default
-
     elif isinstance(value, datetime):
         parsed = value
-
     elif isinstance(value, Real) and not isinstance(value, bool):
         timestamp = float(value)
 
@@ -516,7 +519,6 @@ def _coerce_datetime(
             timestamp,
             tz=timezone.utc,
         )
-
     elif isinstance(value, str):
         text = value.strip()
 
@@ -524,7 +526,6 @@ def _coerce_datetime(
             text = f"{text[:-1]}+00:00"
 
         parsed = datetime.fromisoformat(text)
-
     else:
         raise ValueError(
             "event_time must be an ISO timestamp, datetime, or epoch.",
@@ -555,6 +556,7 @@ def _normalize_severity(value: Any) -> str:
         return "medium"
 
     normalized = _text(value, default="medium")
+
     return _SEVERITY_BY_NAME.get(
         normalized.casefold(),
         "medium",
@@ -624,7 +626,10 @@ def _json_safe(value: Any) -> Any:
         }
 
     if isinstance(value, (list, tuple)):
-        return [_json_safe(item) for item in value]
+        return [
+            _json_safe(item)
+            for item in value
+        ]
 
     if isinstance(value, (datetime, UUID)):
         return str(value)

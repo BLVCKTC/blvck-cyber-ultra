@@ -1,17 +1,28 @@
 import { cn } from '@/lib/utils'
-import { type Severity, severityLabel } from '@/lib/soc/mock'
+
+export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical'
+
+const severityLabel: Record<Severity, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
+}
 
 const severityStyles: Record<Severity, string> = {
   critical: 'border-critical/40 bg-critical/10 text-critical',
   high: 'border-high/40 bg-high/10 text-high',
-  warning: 'border-warning/40 bg-warning/10 text-warning',
+  medium: 'border-warning/40 bg-warning/10 text-warning',
+  low: 'border-info/40 bg-info/10 text-info',
   info: 'border-info/40 bg-info/10 text-info',
 }
 
 const severityDot: Record<Severity, string> = {
   critical: 'bg-critical',
   high: 'bg-high',
-  warning: 'bg-warning',
+  medium: 'bg-warning',
+  low: 'bg-info',
   info: 'bg-info',
 }
 
@@ -31,6 +42,7 @@ export function SeverityBadge({
       )}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full', severityDot[severity])} />
+
       {severityLabel[severity]}
     </span>
   )
@@ -45,7 +57,13 @@ export function SeverityDot({ severity }: { severity: Severity }) {
   )
 }
 
-type Tone = 'neutral' | 'info' | 'warning' | 'success' | 'critical' | 'muted'
+export type Tone =
+  | 'neutral'
+  | 'info'
+  | 'warning'
+  | 'success'
+  | 'critical'
+  | 'muted'
 
 const toneStyles: Record<Tone, string> = {
   neutral: 'border-primary/30 bg-primary/10 text-primary',
@@ -81,6 +99,7 @@ export function StatusChip({
 export function ConfidenceMeter({ value }: { value: number }) {
   const tone =
     value >= 90 ? 'bg-critical' : value >= 75 ? 'bg-high' : 'bg-warning'
+
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
@@ -89,6 +108,7 @@ export function ConfidenceMeter({ value }: { value: number }) {
           style={{ width: `${value}%` }}
         />
       </div>
+
       <span className="text-xs tabular text-muted-foreground">{value}%</span>
     </div>
   )
@@ -106,6 +126,7 @@ export function MetaItem({
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
+
       <div className="mt-0.5 truncate text-sm font-medium text-foreground">
         {children}
       </div>

@@ -29,7 +29,9 @@ class SecurityEventService:
             )
 
         if offset < 0:
-            raise ValueError("offset must be greater than or equal to 0")
+            raise ValueError(
+                "offset must be greater than or equal to 0"
+            )
 
     @staticmethod
     def _build_filters(
@@ -61,15 +63,24 @@ class SecurityEventService:
             "start_time": start_time,
             "end_time": end_time,
         }
-
+    
     def create(
         self,
         *,
         tenant_id: UUID,
         payload: SecurityEventCreate,
     ) -> SecurityEvent:
+        """
+        Create a tenant-scoped security event.
+
+        Tenant identity is supplied separately from the payload so that
+        persistence cannot accidentally trust a tenant_id from telemetry.
+        """
         # Use Python mode so UUIDs and datetimes remain ORM-native values.
-        data = payload.model_dump(mode="python", exclude_none=False)
+        data = payload.model_dump(
+            mode="python",
+            exclude_none=False,
+        )
 
         return self.events.create(
             tenant_id=tenant_id,
@@ -82,9 +93,44 @@ class SecurityEventService:
         tenant_id: UUID,
         event_id: UUID,
     ) -> SecurityEvent | None:
+        """Get one event by ID within the authenticated tenant."""
         return self.events.get(
             tenant_id=tenant_id,
             event_id=event_id,
+        )
+
+    def get_by_source_event_id(
+        self,
+        *,
+        tenant_id: UUID,
+        source: str,
+        source_event_id: str,
+    ) -> SecurityEvent | None:
+        """
+        Find an existing event using the source's stable event ID.
+
+        The lookup is always tenant-scoped.
+        """
+        return self.events.get_by_source_event_id(
+            tenant_id=tenant_id,
+            source=source,
+            source_event_id=source_event_id,
+        )
+
+    def get_by_fingerprint(
+        self,
+        *,
+        tenant_id: UUID,
+        fingerprint: str,
+    ) -> SecurityEvent | None:
+        """
+        Find an existing event using its deterministic fingerprint.
+
+        The lookup is always tenant-scoped.
+        """
+        return self.events.get_by_fingerprint(
+            tenant_id=tenant_id,
+            fingerprint=fingerprint,
         )
 
     def list(
@@ -106,6 +152,7 @@ class SecurityEventService:
         start_time: datetime | None = None,
         end_time: datetime | None = None,
     ) -> tuple[list[SecurityEvent], int]:
+        """List security events within the authenticated tenant."""
         self._validate_pagination(limit, offset)
 
         filters = self._build_filters(
@@ -129,6 +176,7 @@ class SecurityEventService:
             offset=offset,
             **filters,
         )
+
         total = self.events.count(
             tenant_id=tenant_id,
             **filters,
@@ -143,6 +191,11 @@ class SecurityEventService:
         event_id: UUID,
         payload: SecurityEventUpdate,
     ) -> SecurityEvent | None:
+        """
+        Update an event within the authenticated tenant.
+
+        Only fields permitted by SecurityEventUpdate can be changed.
+        """
         # Preserve explicitly supplied null values for PATCH semantics.
         data = payload.model_dump(
             mode="python",
@@ -150,7 +203,9 @@ class SecurityEventService:
         )
 
         if not data:
-            raise ValueError("update payload must contain at least one field")
+            raise ValueError(
+                "update payload must contain at least one field"
+            )
 
         return self.events.update(
             tenant_id=tenant_id,
@@ -164,6 +219,7 @@ class SecurityEventService:
         tenant_id: UUID,
         event_id: UUID,
     ) -> bool:
+        """Delete an event within the authenticated tenant."""
         return self.events.delete(
             tenant_id=tenant_id,
             event_id=event_id,

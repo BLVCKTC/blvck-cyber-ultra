@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
+from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.ingestion.models import IngestionResult, SecurityEventEnvelope
@@ -13,35 +15,9 @@ from app.services.security_event_service import SecurityEventService
 
 
 class SecurityEventIngestionPipeline:
-    """
-    Normalize, validate, and persist security events.
+    """Normalize, validate, deduplicate, and persist security events."""
 
-    Pipeline:
-
-        SecurityEventEnvelope
-                ↓
-        SecurityEventNormalizer
-                ↓
-        SecurityEventCreate
-                ↓
-        SecurityEventValidator
-                ↓
-        validated mapping
-                ↓
-        SecurityEventCreate
-                ↓
-        SecurityEventService
-                ↓
-        PostgreSQL
-
-    The tenant ID from the authenticated envelope is authoritative and is
-    validated before persistence.
-    """
-
-    def __init__(
-        self,
-        db: Session,
-    ) -> None:
+    def __init__(self, db: Session) -> None:
         self.db = db
         self.normalizer = SecurityEventNormalizer()
         self.events = SecurityEventService(db)
@@ -50,36 +26,62 @@ class SecurityEventIngestionPipeline:
         self,
         envelope: SecurityEventEnvelope,
     ) -> IngestionResult:
-        """Process and persist one security-event envelope."""
-
         tenant_id = envelope.tenant_id
 
         try:
-
             normalized = self.normalizer.normalize(envelope)
-
             payload = self._model_to_mapping(normalized)
 
-            validator = SecurityEventValidator(
+            validated_payload = SecurityEventValidator(
                 authenticated_tenant_id=tenant_id,
-            )
+            ).validate(payload)
 
-            validated_payload = validator.validate(payload)
-
-            validated_event = SecurityEventCreate.model_validate(
+            event_payload = SecurityEventCreate.model_validate(
                 validated_payload,
             )
-
-            fingerprint = self._extract_fingerprint(
-                validated_event.model_dump(
-                    mode="python",
-                ),
+            event_mapping = event_payload.model_dump(
+                mode="python",
+                exclude_none=False,
             )
 
-            event = self.events.create(
+            fingerprint = self._extract_fingerprint(event_mapping)
+            source_event_id = self._extract_source_event_id(event_mapping)
+
+            duplicate = self._find_duplicate(
                 tenant_id=tenant_id,
-                payload=validated_event,
+                source=envelope.source,
+                source_event_id=source_event_id,
+                fingerprint=fingerprint,
             )
+            if duplicate is not None:
+                return self._duplicate_result(
+                    duplicate,
+                    tenant_id=tenant_id,
+                    fingerprint=fingerprint,
+                )
+
+            try:
+                event = self.events.create(
+                    tenant_id=tenant_id,
+                    payload=event_payload,
+                )
+            except IntegrityError:
+                self.db.rollback()
+
+                duplicate = self._find_duplicate(
+                    tenant_id=tenant_id,
+                    source=envelope.source,
+                    source_event_id=source_event_id,
+                    fingerprint=fingerprint,
+                )
+                if duplicate is None:
+                    raise
+
+                return self._duplicate_result(
+                    duplicate,
+                    tenant_id=tenant_id,
+                    fingerprint=fingerprint,
+                )
 
             return IngestionResult.accepted_event(
                 event_id=event.id,
@@ -95,23 +97,50 @@ class SecurityEventIngestionPipeline:
                 message=str(exc),
             )
 
-    @staticmethod
-    def _model_to_mapping(
-        value: Any,
-    ) -> dict[str, Any]:
-        """
-        Convert a Pydantic model or mapping into a mutable dictionary.
-        """
+    def _find_duplicate(
+        self,
+        *,
+        tenant_id: UUID,
+        source: str,
+        source_event_id: str | None,
+        fingerprint: str,
+    ) -> Any | None:
+        if source_event_id is not None:
+            event = self.events.get_by_source_event_id(
+                tenant_id=tenant_id,
+                source=source,
+                source_event_id=source_event_id,
+            )
+            if event is not None:
+                return event
 
+        return self.events.get_by_fingerprint(
+            tenant_id=tenant_id,
+            fingerprint=fingerprint,
+        )
+
+    @staticmethod
+    def _duplicate_result(
+        event: Any,
+        *,
+        tenant_id: UUID,
+        fingerprint: str,
+    ) -> IngestionResult:
+        return IngestionResult.duplicate_event(
+            event_id=event.id,
+            tenant_id=tenant_id,
+            fingerprint=event.event_fingerprint or fingerprint,
+        )
+
+    @staticmethod
+    def _model_to_mapping(value: Any) -> dict[str, Any]:
         if hasattr(value, "model_dump"):
             data = value.model_dump(
                 mode="python",
                 exclude_none=False,
             )
-
         elif isinstance(value, Mapping):
             data = dict(value)
-
         else:
             raise TypeError(
                 "Normalizer must return a mapping or Pydantic model.",
@@ -128,38 +157,45 @@ class SecurityEventIngestionPipeline:
     def _extract_fingerprint(
         event: Mapping[str, Any],
     ) -> str:
-        """Return the validated event fingerprint."""
-
         fingerprint = event.get("event_fingerprint")
 
-        if not isinstance(fingerprint, str) or not fingerprint.strip():
+        if not isinstance(fingerprint, str):
             raise ValueError(
                 "Validated event does not contain event_fingerprint.",
             )
 
-        return fingerprint.strip()
+        fingerprint = fingerprint.strip()
+        if not fingerprint:
+            raise ValueError(
+                "Validated event does not contain event_fingerprint.",
+            )
+
+        return fingerprint
+
+    @staticmethod
+    def _extract_source_event_id(
+        event: Mapping[str, Any],
+    ) -> str | None:
+        source_event_id = event.get("source_event_id")
+
+        if source_event_id is None:
+            return None
+
+        if not isinstance(source_event_id, str):
+            raise ValueError("source_event_id must be a string.")
+
+        source_event_id = source_event_id.strip()
+        return source_event_id or None
 
     def ingest_many(
         self,
         envelopes: list[SecurityEventEnvelope],
     ) -> list[IngestionResult]:
-        """
-        Process multiple envelopes independently.
-
-        A failed event is rolled back without discarding results for other
-        envelopes.
-        """
-
-        return [
-            self.ingest(envelope)
-            for envelope in envelopes
-        ]
+        return [self.ingest(envelope) for envelope in envelopes]
 
 
 def ingest_security_event(
     db: Session,
     envelope: SecurityEventEnvelope,
 ) -> IngestionResult:
-    """Convenience entry point for application services and API routes."""
-
     return SecurityEventIngestionPipeline(db).ingest(envelope)
