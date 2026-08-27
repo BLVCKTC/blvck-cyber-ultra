@@ -1,10 +1,11 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import useSWR from "swr"
 import { Activity, CheckCheck, ChevronLeft, ChevronRight, CircleAlert, Clock3, Radio, Search, ShieldAlert, Siren, UserRoundCheck } from "lucide-react"
 import { toast } from "sonner"
-import { alerts } from "@/lib/dashboard/data"
 import { PageHeader, Panel, SeverityBadge, StatCard, StatusBadge } from "@/components/dashboard/shared/ui"
+import { getAlerts, type Alert } from "@/lib/api/alerts"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -13,10 +14,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
+type DashboardAlert = Alert & { asset: string; source: string; mitre: string; assignee: string; time: string; ioc: string }
+
+function normalizeAlert(alert: Alert): DashboardAlert {
+  const metadata = alert.metadata_json ?? {}
+  return { ...alert, asset: String(metadata.asset ?? "Unassigned"), source: alert.source ?? "Detection engine", mitre: String(metadata.mitre ?? "—"), assignee: String(metadata.assignee ?? "Unassigned"), time: alert.last_seen_at, ioc: String(metadata.ioc ?? "—") }
+}
+
 export function AlertsModule() {
-  const [query,setQuery]=useState(""); const [severity,setSeverity]=useState("All"); const [selected,setSelected]=useState<(typeof alerts)[number]|null>(null); const [statuses,setStatuses]=useState<Record<string,string>>({})
-  const shown=useMemo(()=>alerts.filter(a=>(severity==="All"||a.severity===severity)&&`${a.title} ${a.id} ${a.asset}`.toLowerCase().includes(query.toLowerCase())),[query,severity])
+  const [query,setQuery]=useState(""); const [severity,setSeverity]=useState("All"); const [selected,setSelected]=useState<DashboardAlert|null>(null); const [statuses,setStatuses]=useState<Record<string,string>>({})
+  const { data, error, isLoading } = useSWR("alerts", () => getAlerts({ limit: 100 }))
+  const alerts = useMemo(() => (data?.items ?? []).map(normalizeAlert), [data])
+  const shown=useMemo(()=>alerts.filter(a=>(severity==="All"||a.severity===severity.toLowerCase())&&`${a.title} ${a.id} ${a.asset}`.toLowerCase().includes(query.toLowerCase())),[alerts,query,severity])
   const acknowledge=(id:string)=>{setStatuses(s=>({...s,[id]:"Investigating"}));toast.success(`${id} acknowledged and audit logged`)}
+  if (isLoading) return <p className="py-10 text-center text-sm text-muted-foreground">Loading tenant alerts…</p>
+  if (error) return <p className="py-10 text-center text-sm text-destructive">Alert queue is unavailable.</p>
   return <div className="flex flex-col gap-6"><PageHeader eyebrow="Detection & response" title="Live alert queue" description="Triage correlated detections, collect evidence, and coordinate response across the security estate." actions={<><Button variant="outline"><Radio data-icon="inline-start"/>Live stream</Button><Button onClick={()=>toast.success("24 alerts assigned to your shift")}><UserRoundCheck data-icon="inline-start"/>Claim queue</Button></>}/>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><StatCard label="Open alerts" value="24" change="-12%" icon={ShieldAlert} detail="6 require action"/><StatCard label="Critical" value="3" change="+1" icon={Siren} detail="Oldest: 18 minutes"/><StatCard label="Mean triage" value="6m 42s" change="-18%" icon={Clock3} detail="Inside 10m SLA"/><StatCard label="Events / min" value="18.4k" change="+8.2%" icon={Activity} detail="All collectors healthy"/></div>
     <Panel title="Detection queue" description={`${shown.length} correlated alerts in current view`} action={<span className="flex items-center gap-2 text-xs text-primary"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60"/><span className="relative size-2 rounded-full bg-primary"/></span>Realtime</span>}>

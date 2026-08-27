@@ -10,6 +10,9 @@ from app.api.routes.security_events import router as security_events_router
 from app.api.routes.detection_rules import router as detection_rules_router
 from app.api.routes.alerts_api import router as alerts_router
 from app.api.routes.investigations import router as investigations_router
+from app.api.routes.incidents import router as incidents_router
+from app.api.routes.intelligence import router as intelligence_router
+from app.api.routes.operations import router as operations_router
 
 from app.core.config import settings
 
@@ -109,6 +112,21 @@ app.include_router(
 
 app.include_router(
     investigations_router,
+    prefix=settings.API_PREFIX,
+)
+
+app.include_router(
+    incidents_router,
+    prefix=settings.API_PREFIX,
+)
+
+app.include_router(
+    intelligence_router,
+    prefix=settings.API_PREFIX,
+)
+
+app.include_router(
+    operations_router,
     prefix=settings.API_PREFIX,
 )
 

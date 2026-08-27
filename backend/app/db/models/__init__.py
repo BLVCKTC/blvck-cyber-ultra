@@ -6,6 +6,15 @@ from app.db.models.security_event import SecurityEvent
 from app.db.models.detection_rule import DetectionRule
 from app.db.models.alert import Alert
 from app.db.models.investigation import Investigation, Evidence
+from app.db.models.foundation import (
+    Team, TeamMember, ApiKey, SecuritySetting, AuditLogEntry,
+    Plan, Subscription, Domain, OrganizationProfile,
+)
+from app.db.models.operations import (
+    Incident, IncidentAlert, RuleVersion, DetectionMatch,
+    AlertFeedback, ResponseAction,
+)
+from app.db.models.intelligence import Asset, Vulnerability, VulnerabilityInstance, Indicator
 
 __all__ = [
     "User",
