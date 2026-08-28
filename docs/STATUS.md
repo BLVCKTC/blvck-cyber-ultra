@@ -4,7 +4,7 @@
 > as the behavior it describes. **Backed** = real tenant-scoped endpoint.
 > **Mock** = renders from a frontend mock module. **Partial** = some real, some mock.
 
-_Last reconciled against code: identity/tenancy/RBAC live; entire SOC domain is mock._
+_Last reconciled against code: identity/tenancy/RBAC and the Structural MVP operation workflows are backed; most SOC enrichment surfaces remain mock._
 
 ## 1. Backend routers
 

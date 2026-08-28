@@ -21,7 +21,10 @@ class Incident(Base):
 
 class IncidentAlert(Base):
     __tablename__ = "incident_alerts"
-    __table_args__ = (UniqueConstraint("incident_id", "alert_id", name="uq_incident_alert"),)
+    __table_args__ = (
+        UniqueConstraint("incident_id", "alert_id", name="uq_incident_alert"),
+        Index("ix_incident_alerts_tenant", "tenant_id", "created_at"),
+    )
     incident_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("incidents.id", ondelete="CASCADE"), primary_key=True)
     alert_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("alerts.id", ondelete="CASCADE"), primary_key=True)
     tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -49,6 +52,10 @@ class DetectionMatch(Base):
 
 class AlertFeedback(Base):
     __tablename__ = "alert_feedback"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "alert_id", "user_id", name="uq_alert_feedback_actor"),
+        Index("ix_alert_feedback_tenant_created", "tenant_id", "created_at"),
+    )
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     alert_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("alerts.id", ondelete="CASCADE"), nullable=False)
@@ -59,6 +66,7 @@ class AlertFeedback(Base):
 
 class ResponseAction(Base):
     __tablename__ = "response_actions"
+    __table_args__ = (Index("ix_response_actions_tenant_status", "tenant_id", "status", "created_at"),)
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     incident_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False)
