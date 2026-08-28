@@ -11,10 +11,9 @@ interface Msg {
 }
 
 const suggestions = [
-  "Explain the top critical threat",
-  "What should I fix first?",
-  "Summarize today's security posture",
-  "Is my banking database safe?",
+  "Summarize the current active incidents and suggest next steps",
+  "Which MITRE techniques have the weakest detection coverage right now?",
+  "Explain the top priority alert and its affected asset",
 ]
 
 const responses: Record<string, string> = {
