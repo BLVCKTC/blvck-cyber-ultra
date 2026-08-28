@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { Activity, Bot, Crosshair, Flame, Layers, Radar, ShieldAlert, ArrowUpRight } from 'lucide-react'
+import { Activity, Bot, GitBranch, ShieldCheck, Siren } from 'lucide-react'
 
-import { SectionHeading } from '@/components/soc/shell'
 import { Panel } from '@/components/soc/panel'
 import { KpiCards } from '@/components/soc/dashboard/kpi-cards'
 import { AlertVolumeChart } from '@/components/soc/dashboard/alert-volume-chart'
@@ -16,41 +15,42 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   const { tenantId } = await params
 
   return (
-    <div className="space-y-6">
-      <SectionHeading
-        title="Security operations"
-        sub="Live posture across detection, response, and exposure for the last 24 hours."
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/dashboard/${tenantId}/ai-assistant`} className="group inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15">
-              <Bot aria-hidden="true" /> Ask AI analyst <ArrowUpRight aria-hidden="true" />
-            </Link>
-            <div className="flex items-center gap-2 rounded-md border border-success/25 bg-success/10 px-3 py-1.5 text-xs font-medium text-success"><span className="size-1.5 rounded-full bg-success" /> All collectors reporting</div>
-          </div>
-        }
-      />
+    <main className="soc-reference-dashboard">
+      <header className="soc-reference-header">
+        <div>
+          <p className="soc-eyebrow">BLVCK CYBER</p>
+          <h1>Security operations — Mining OT</h1>
+          <p className="soc-subtitle">Correlated IT/OT posture across corporate systems and mine-site zones.</p>
+        </div>
+        <div className="soc-reporting"><span /> All edge nodes reporting</div>
+      </header>
+
+      <div className="soc-sitebar" aria-label="Site filters">
+        <span>Site:</span>
+        <button className="is-selected">All sites (4)</button>
+        <button>Mine-07 Kalgoorlie</button>
+        <button>Mine-12 Pilbara</button>
+        <button>Mine-03 Sudbury</button>
+        <div className="soc-legend"><span className="it" /> IT <span className="dmz" /> DMZ <span className="scada" /> SCADA <span className="control" /> Control <span className="safety" /> Safety <span className="autonomous" /> Autonomous</div>
+      </div>
 
       <KpiCards />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Panel title="Alert volume" icon={<Activity aria-hidden="true" />} className="xl:col-span-2" bodyClassName="pt-3"><AlertVolumeChart /></Panel>
-        <Panel title="Open by severity" icon={<Layers aria-hidden="true" />}><SeverityBreakdown /></Panel>
-      </div>
+      <section className="soc-summary-grid">
+        <Panel title="Open by severity" icon={<Siren aria-hidden="true" />}><SeverityBreakdown /></Panel>
+        <Panel title="Detections by source" icon={<Activity aria-hidden="true" />}><DetectionSources /></Panel>
+        <MitreCoverage />
+      </section>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Panel title="Detections by source" icon={<Radar aria-hidden="true" />}><DetectionSources /></Panel>
-        <div className="xl:col-span-2"><MitreCoverage /></div>
-      </div>
+      <Panel title="Alert volume" icon={<Activity aria-hidden="true" />} bodyClassName="soc-chart-body"><AlertVolumeChart /></Panel>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Panel title="Priority queue" icon={<ShieldAlert aria-hidden="true" />} className="xl:col-span-2" bodyClassName="p-0" action={<Link href={`/dashboard/${tenantId}/alerts`} className="text-xs font-medium text-primary hover:underline">View all alerts</Link>}><PriorityQueue tenantId={tenantId} /></Panel>
-        <Panel title="Active incidents" icon={<Flame aria-hidden="true" />} bodyClassName="p-0" action={<Link href={`/dashboard/${tenantId}/incidents`} className="text-xs font-medium text-primary hover:underline">View all</Link>}><ActiveIncidents tenantId={tenantId} /></Panel>
-      </div>
+      <section className="soc-work-grid">
+        <Panel title="Priority queue" icon={<ShieldCheck aria-hidden="true" />} className="soc-queue-panel" bodyClassName="p-0" action={<Link href={`/dashboard/${tenantId}/alerts`}>View all alerts</Link>}><PriorityQueue tenantId={tenantId} /></Panel>
+        <Panel title="Incidents" icon={<GitBranch aria-hidden="true" />} bodyClassName="p-0" action={<Link href={`/dashboard/${tenantId}/incidents`}>View all</Link>}><ActiveIncidents tenantId={tenantId} /></Panel>
+      </section>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2"><Panel title="AI analyst workspace" icon={<Bot aria-hidden="true" />} bodyClassName="p-0" action={<Link href={`/dashboard/${tenantId}/ai-assistant`} className="text-xs font-medium text-primary hover:underline">Open full workspace</Link>}><AIAssistant /></Panel></div>
-        <IncidentCorrelation tenantId={tenantId} />
-      </div>
-    </div>
+      <Panel title="AI analyst workspace" icon={<Bot aria-hidden="true" />} bodyClassName="soc-ai-body" action={<Link href={`/dashboard/${tenantId}/ai-assistant`}>Open workspace</Link>}><AIAssistant /></Panel>
+      <div className="soc-correlation"><IncidentCorrelation tenantId={tenantId} /></div>
+    </main>
   )
 }
