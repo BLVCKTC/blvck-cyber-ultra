@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { API_URL, authenticatedFetch } from '@/lib/api/client'
 
 type KpiCardsProps = {
   tenantId: string
@@ -79,8 +80,8 @@ export function KpiCards({ tenantId }: KpiCardsProps) {
       try {
         setLoading(true)
 
-        const response = await fetch(
-          `/api/v1/tenants/${tenantId}/dashboard/kpis`,
+        const response = await authenticatedFetch(
+          `${API_URL}/v1/tenants/${tenantId}/dashboard/kpis`,
           {
             signal: controller.signal,
             cache: 'no-store',
