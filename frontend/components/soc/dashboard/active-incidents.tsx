@@ -1,4 +1,5 @@
 import Link from 'next/link'
+
 import { incidents, incidentStatusLabel } from '@/lib/soc/mock'
 import { SeverityBadge, StatusChip } from '@/components/soc/primitives'
 
@@ -9,10 +10,15 @@ const statusTone = {
   resolved: 'success',
 } as const
 
-export function ActiveIncidents({ tenantId }: { tenantId: string }) {
+type ActiveIncidentsProps = {
+  tenantId: string
+  limit?: number
+}
+
+export function ActiveIncidents({ tenantId, limit = 4 }: ActiveIncidentsProps) {
   const active = incidents
     .filter((i) => i.status !== 'resolved')
-    .slice(0, 4)
+    .slice(0, limit)
 
   return (
     <ul className="divide-y divide-border">
@@ -26,18 +32,23 @@ export function ActiveIncidents({ tenantId }: { tenantId: string }) {
               <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-foreground">
                 {i.priority}
               </span>
+
               <SeverityBadge severity={i.severity} />
+
               <StatusChip
                 label={incidentStatusLabel[i.status]}
                 tone={statusTone[i.status]}
               />
+
               <span className="ml-auto text-xs text-muted-foreground">
                 {i.updatedAt}
               </span>
             </div>
+
             <p className="mt-2 truncate text-sm font-medium text-foreground">
               {i.title}
             </p>
+
             <p className="mt-0.5 text-xs text-muted-foreground">
               {i.id} · {i.alertCount} alerts · owner {i.owner}
             </p>

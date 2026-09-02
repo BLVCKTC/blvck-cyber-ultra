@@ -37,19 +37,20 @@ def add_member(
     ),
 ):
     tenant_id = _validate_tenant_id(tenant_id)
+    if str(membership.tenant_id) != tenant_id:
+        raise HTTPException(status_code=403, detail="tenant_mismatch")
     return MembershipService(db).add_member(tenant_id=tenant_id, payload=payload)
 
 
-@router.get(
-    "/tenants/{tenant_id}/members",
-    response_model=MembershipListResponse,
-)
+@router.get("/tenants/{tenant_id}/members", response_model=MembershipListResponse)
 def list_members(
     tenant_id: str = Path(..., min_length=1),
     db: Session = Depends(get_db),
-    membership=Depends(get_active_membership),  # users inside the tenant can list
+    membership=Depends(get_active_membership),
 ):
     tenant_id = _validate_tenant_id(tenant_id)
+    if str(membership.tenant_id) != tenant_id:
+        raise HTTPException(status_code=403, detail="tenant_mismatch")
     items = MembershipService(db).list_members(tenant_id)
     return {"items": items, "total": len(items)}
 
@@ -68,7 +69,9 @@ def update_member(
     ),
 ):
     tenant_id = _validate_tenant_id(tenant_id)
-    # Service signature doesn’t accept tenant_id; RBAC scoping is handled by the dependency via tenant_id.
+    if str(membership.tenant_id) != tenant_id:
+        raise HTTPException(status_code=403, detail="tenant_mismatch")
+    # Service signature doesn't accept tenant_id; RBAC scoping is handled by the dependency via tenant_id.
     return MembershipService(db).update_member(membership_id=membership_id, payload=payload)
 
 
@@ -85,6 +88,8 @@ def delete_member(
     ),
 ):
     tenant_id = _validate_tenant_id(tenant_id)
-    # Service signature doesn’t accept tenant_id; RBAC scoping is handled by the dependency via tenant_id.
+    if str(membership.tenant_id) != tenant_id:
+        raise HTTPException(status_code=403, detail="tenant_mismatch")
+    # Service signature doesn't accept tenant_id; RBAC scoping is handled by the dependency via tenant_id.
     MembershipService(db).remove_member(membership_id=membership_id)
     return None

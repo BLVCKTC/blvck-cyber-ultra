@@ -1,10 +1,19 @@
+import type { ReactNode } from 'react'
+
 import { cn } from '@/lib/utils'
 
-export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical'
+export type Severity =
+  | 'info'
+  | 'low'
+  | 'medium'
+  | 'warning'
+  | 'high'
+  | 'critical'
 
 const severityLabel: Record<Severity, string> = {
   critical: 'Critical',
   high: 'High',
+  warning: 'Warning',
   medium: 'Medium',
   low: 'Low',
   info: 'Info',
@@ -13,6 +22,7 @@ const severityLabel: Record<Severity, string> = {
 const severityStyles: Record<Severity, string> = {
   critical: 'border-critical/40 bg-critical/10 text-critical',
   high: 'border-high/40 bg-high/10 text-high',
+  warning: 'border-warning/40 bg-warning/10 text-warning',
   medium: 'border-warning/40 bg-warning/10 text-warning',
   low: 'border-info/40 bg-info/10 text-info',
   info: 'border-info/40 bg-info/10 text-info',
@@ -21,6 +31,7 @@ const severityStyles: Record<Severity, string> = {
 const severityDot: Record<Severity, string> = {
   critical: 'bg-critical',
   high: 'bg-high',
+  warning: 'bg-warning',
   medium: 'bg-warning',
   low: 'bg-info',
   info: 'bg-info',
@@ -52,7 +63,7 @@ export function SeverityDot({ severity }: { severity: Severity }) {
   return (
     <span
       className={cn('inline-block h-2 w-2 rounded-full', severityDot[severity])}
-      aria-hidden
+      aria-hidden="true"
     />
   )
 }
@@ -105,7 +116,9 @@ export function ConfidenceMeter({ value }: { value: number }) {
       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
         <div
           className={cn('h-full rounded-full', tone)}
-          style={{ width: `${value}%` }}
+          style={{
+            width: `${Math.min(Math.max(value, 0), 100)}%`,
+          }}
         />
       </div>
 
@@ -119,7 +132,7 @@ export function MetaItem({
   children,
 }: {
   label: string
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <div className="min-w-0">

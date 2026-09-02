@@ -7,9 +7,11 @@ from app.db.models.detection_rule import DetectionRule
 from app.db.models.alert import Alert
 from app.db.models.investigation import Investigation, Evidence
 from app.db.models.foundation import (
-    Team, TeamMember, ApiKey, SecuritySetting, AuditLogEntry,
+    ApiKey, SecuritySetting, AuditLogEntry,
     Plan, Subscription, Domain, OrganizationProfile,
 )
+from app.db.models.team import Team
+from app.db.models.team_member import TeamMember
 from app.db.models.operations import (
     Incident, IncidentAlert, RuleVersion, DetectionMatch,
     AlertFeedback, ResponseAction,

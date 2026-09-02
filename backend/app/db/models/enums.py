@@ -8,3 +8,7 @@ class MembershipRole(str, Enum):
     SOC_ANALYST = "SOC_ANALYST"
     INCIDENT_RESPONDER = "INCIDENT_RESPONDER"
     VIEWER = "VIEWER"
+
+class TeamMemberRole(str, Enum):
+    LEAD = "lead"
+    MEMBER = "member"

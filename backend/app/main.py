@@ -14,6 +14,7 @@ from app.api.routes.incidents import router as incidents_router
 from app.api.routes.intelligence import router as intelligence_router
 from app.api.routes.operations import router as operations_router
 from app.api.routes.audit import router as audit_router
+from app.api.routes.teams import router as teams_router
 
 from app.core.config import settings
 
@@ -31,10 +32,7 @@ app = FastAPI(
 origins = [
     # Next.js local development
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
 
-    # Next.js network access
-    "http://172.16.0.2:3000",
 ]
 
 
@@ -136,6 +134,10 @@ app.include_router(
     prefix=settings.API_PREFIX,
 )
 
+app.include_router(
+    teams_router,
+    prefix=settings.API_PREFIX,
+)
 
 # ==========================================================
 # ROOT HEALTH CHECK

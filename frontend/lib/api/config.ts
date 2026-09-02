@@ -8,9 +8,9 @@
 // GET /auth/me. Keeping the base URL and login/logout URL builders in one
 // place avoids hardcoding hosts across the app.
 
-/** Base URL of the FastAPI backend, e.g. http://127.0.0.1:8000/api */
+/** Base URL of the FastAPI backend, e.g. http://localhost:8000/api */
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000/api'
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api'
 
 /**
  * Browser navigation target that starts the Keycloak login flow.
@@ -20,9 +20,7 @@ export const API_URL =
  * and invitation flows, but no synthetic tenant is ever sent by default.
  */
 export function loginUrl(tenantId?: string | null): string {
-  const query = tenantId
-    ? `?tenant_id=${encodeURIComponent(tenantId)}`
-    : ''
+  const query = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : ''
 
   return `${API_URL}/auth/login${query}`
 }

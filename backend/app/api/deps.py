@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import Depends, HTTPException, Request
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import SESSION_COOKIE_NAME, ACTIVE_TENANT_COOKIE_NAME
@@ -18,6 +19,19 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def _set_session_context(db: Session, *, user_id: str, tenant_id: str | None) -> None:
+    """Sets Postgres session variables that RLS policies read.
+    Session-scoped (is_local=false), not transaction-scoped, so the
+    context survives any intermediate commits during this request."""
+    db.execute(
+        text("SELECT set_config('app.user_id', :uid, false)"),
+        {"uid": user_id},
+    )
+    db.execute(
+        text("SELECT set_config('app.tenant_id', :tid, false)"),
+        {"tid": tenant_id or ""},
+    )
 
 def get_current_user(
     request: Request,
@@ -47,6 +61,8 @@ def get_current_user(
             detail="user_not_found",
         )
 
+    _set_session_context(db, user_id=str(user.id), tenant_id=None)
+
     return user
 
 def get_active_membership(
@@ -61,6 +77,8 @@ def get_active_membership(
             status_code=HTTP_401_UNAUTHORIZED,
             detail="tenant_not_selected",
         )
+
+    _set_session_context(db, user_id=str(user.id), tenant_id=str(tenant_id))
 
     membership = MembershipRepo(db).get_membership(user.id, tenant_id)
     if membership is None:

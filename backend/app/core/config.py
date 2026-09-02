@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str
+    ALEMBIC_DATABASE_URL: str
 
     # Cookies
     SESSION_COOKIE_NAME: str = "session_kc_access"
@@ -98,6 +99,7 @@ AUTH_REDIRECT_URI = settings.computed_auth_redirect_uri
 
 # Database
 DATABASE_URL = settings.DATABASE_URL
+ALEMBIC_DATABASE_URL = settings.ALEMBIC_DATABASE_URL
 
 # Cookies
 SESSION_COOKIE_NAME = settings.SESSION_COOKIE_NAME

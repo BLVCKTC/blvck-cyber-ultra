@@ -1,0 +1,12 @@
+DO $$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'blvck_app_runtime') THEN
+      CREATE ROLE blvck_app_runtime LOGIN PASSWORD 'SHKTqJQ93kdgcWUsRA26uBj1i0wrtFxG' NOBYPASSRLS;
+   END IF;
+END
+$$;
+
+GRANT USAGE ON SCHEMA public TO blvck_app_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO blvck_app_runtime;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO blvck_app_runtime;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO blvck_app_runtime;

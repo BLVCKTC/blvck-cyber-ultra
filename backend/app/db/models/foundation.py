@@ -6,26 +6,6 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
-class Team(Base):
-    __tablename__ = "teams"
-    __table_args__ = (UniqueConstraint("tenant_id", "slug", name="uq_teams_tenant_slug"), Index("ix_teams_tenant", "tenant_id"))
-    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-    tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
-    name: Mapped[str] = mapped_column(String(120), nullable=False)
-    slug: Mapped[str] = mapped_column(String(120), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-class TeamMember(Base):
-    __tablename__ = "team_members"
-    __table_args__ = (UniqueConstraint("team_id", "user_id", name="uq_team_members_team_user"),)
-    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-    tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
-    team_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
-    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    role: Mapped[str] = mapped_column(String(32), nullable=False, server_default=text("'member'"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
 class ApiKey(Base):
     __tablename__ = "api_keys"
     __table_args__ = (UniqueConstraint("tenant_id", "key_hash", name="uq_api_keys_tenant_hash"), Index("ix_api_keys_tenant_active", "tenant_id", "revoked_at"))

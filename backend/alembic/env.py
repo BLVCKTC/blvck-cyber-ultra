@@ -6,7 +6,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.core.config import DATABASE_URL
+from app.core.config import ALEMBIC_DATABASE_URL
 from app.db.base import Base
 
 # Import models so Base.metadata contains all tables for autogenerate
@@ -14,6 +14,8 @@ from app.db.models.user import User  # noqa: F401
 from app.db.models.tenant import Tenant  # noqa: F401
 from app.db.models.membership import Membership  # noqa: F401
 from app.db.models.pkce_attempt import PKCEAttempt  # noqa: F401
+from app.db.models.team import Team  # noqa: F401
+from app.db.models.team_member import TeamMember  # noqa: F401
 
 config = context.config
 
@@ -24,7 +26,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = DATABASE_URL
+    url = ALEMBIC_DATABASE_URL
 
     context.configure(
         url=url,
@@ -41,8 +43,7 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section) or {}
 
-    # Ensure Alembic uses your app's DATABASE_URL
-    configuration["sqlalchemy.url"] = DATABASE_URL
+    configuration["sqlalchemy.url"] = ALEMBIC_DATABASE_URL
 
     connectable = engine_from_config(
         configuration,
@@ -55,8 +56,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
-            # if you ever run into batch/alter issues with Postgres,
-            # you can toggle this via env var
+
             render_as_batch=os.getenv("ALEMBIC_BATCH_MODE") == "1",
         )
 
