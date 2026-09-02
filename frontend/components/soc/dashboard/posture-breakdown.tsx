@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
+import { API_URL, authenticatedFetch } from '@/lib/api/client'
+
 type BreakdownProps = {
   tenantId: string
   window?: '24h'
@@ -152,8 +154,8 @@ export function SeverityBreakdown({
 
     async function loadSeverityBreakdown() {
       try {
-        const response = await fetch(
-          `/api/v1/tenants/${tenantId}/alerts/severity-breakdown?window=${window}`,
+        const response = await authenticatedFetch(
+          `${API_URL}/v1/tenants/${tenantId}/alerts/severity-breakdown?window=${window}`,
           {
             signal: controller.signal,
             cache: 'no-store',
@@ -209,8 +211,8 @@ export function DetectionSources({ tenantId, window = '24h' }: BreakdownProps) {
 
     async function loadDetectionSources() {
       try {
-        const response = await fetch(
-          `/api/v1/tenants/${tenantId}/events/source-breakdown?window=${window}`,
+        const response = await authenticatedFetch(
+          `${API_URL}/v1/tenants/${tenantId}/events/source-breakdown?window=${window}`,
           {
             signal: controller.signal,
             cache: 'no-store',

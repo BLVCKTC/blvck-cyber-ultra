@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+
+import { API_URL, authenticatedFetch } from '@/lib/api/client'
 import {
   Bar,
   BarChart,
@@ -60,8 +62,8 @@ export function AlertVolumeChart({
       try {
         setLoading(true)
 
-        const response = await fetch(
-          `/api/v1/tenants/${tenantId}/alerts/volume?range=${range}`,
+        const response = await authenticatedFetch(
+          `${API_URL}/v1/tenants/${tenantId}/alerts/volume?range=${range}`,
           {
             signal: controller.signal,
             cache: 'no-store',

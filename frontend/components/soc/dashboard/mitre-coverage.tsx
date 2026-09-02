@@ -5,6 +5,7 @@ import { Crosshair } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Panel } from '@/components/soc/panel'
+import { API_URL, authenticatedFetch } from '@/lib/api/client'
 
 type MitreCoverageProps = {
   tenantId: string
@@ -28,8 +29,8 @@ export function MitreCoverage({ tenantId }: MitreCoverageProps) {
 
     async function loadCoverage() {
       try {
-        const response = await fetch(
-          `/api/v1/tenants/${tenantId}/mitre/coverage`,
+        const response = await authenticatedFetch(
+          `${API_URL}/v1/tenants/${tenantId}/mitre/coverage`,
           {
             signal: controller.signal,
             cache: 'no-store',
