@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import logging
 from fastapi import Depends, HTTPException, Request, Path
 from uuid import UUID
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+from app.db.models.enums import MembershipRole
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import SESSION_COOKIE_NAME, ACTIVE_TENANT_COOKIE_NAME
 from app.core.db import SessionLocal
@@ -71,13 +76,41 @@ def get_tenant_membership(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+    """Authorize the URL tenant using the existing membership relationship.
+
+    The path tenant is intentionally independent of the active-tenant cookie so
+    direct links work for every authorized tenant. The database context is set
+    only after membership succeeds, preserving RLS tenant isolation.
+    """
     membership = MembershipRepo(db).get_membership(user.id, tenant_id)
     if membership is None:
+        logger.warning(
+            "Tenant authorization denied: user_id=%s keycloak_sub=%s requested_tenant_id=%s reason=not_a_member",
+            user.id,
+            user.keycloak_sub,
+            tenant_id,
+        )
         raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="not_a_member")
-    _set_session_context(db, user_id=str(user.id), tenant_id=str(tenant_id))
+
     role = membership.role.value if hasattr(membership.role, "value") else str(membership.role)
-    if role not in {"SOC_ADMIN", "SOC_ANALYST"}:
+    allowed_roles = {
+        MembershipRole.OWNER.value,
+        MembershipRole.ADMIN.value,
+        MembershipRole.SOC_MANAGER.value,
+        MembershipRole.SOC_ANALYST.value,
+    }
+    if role not in allowed_roles:
+        logger.warning(
+            "Tenant authorization denied: user_id=%s keycloak_sub=%s requested_tenant_id=%s membership_tenant_id=%s membership_role=%s reason=invalid_role",
+            user.id,
+            user.keycloak_sub,
+            tenant_id,
+            membership.tenant_id,
+            role,
+        )
         raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="forbidden")
+
+    _set_session_context(db, user_id=str(user.id), tenant_id=str(membership.tenant_id))
     return membership
 
 def get_active_membership(
