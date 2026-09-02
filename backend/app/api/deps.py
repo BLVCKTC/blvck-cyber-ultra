@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request, Path
+from uuid import UUID
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -64,6 +65,20 @@ def get_current_user(
     _set_session_context(db, user_id=str(user.id), tenant_id=None)
 
     return user
+
+def get_tenant_membership(
+    tenant_id: UUID = Path(...),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    membership = MembershipRepo(db).get_membership(user.id, tenant_id)
+    if membership is None:
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="not_a_member")
+    _set_session_context(db, user_id=str(user.id), tenant_id=str(tenant_id))
+    role = membership.role.value if hasattr(membership.role, "value") else str(membership.role)
+    if role not in {"SOC_ADMIN", "SOC_ANALYST"}:
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="forbidden")
+    return membership
 
 def get_active_membership(
     request: Request,
