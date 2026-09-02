@@ -9,7 +9,7 @@ from app.schemas.dashboard import KPIResponse, AlertVolumeResponse, SeverityResp
 router = APIRouter(tags=["dashboard"])
 
 @router.get("/dashboard/summary")
-def summary(m=Depends(require_roles(["SOC_ADMIN", "SOC_ANALYST"]))):
+def summary(m=Depends(require_roles(["OWNER", "ADMIN", "SOC_MANAGER", "SOC_ANALYST"]))):
     return {"tenant_id": str(m.tenant_id), "role": m.role.value if hasattr(m.role, "value") else str(m.role), "data": "secret tenant dashboard data"}
 
 TenantAccess = Annotated[object, Depends(get_tenant_membership)]
