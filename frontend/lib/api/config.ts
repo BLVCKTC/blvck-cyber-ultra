@@ -8,9 +8,13 @@
 // GET /auth/me. Keeping the base URL and login/logout URL builders in one
 // place avoids hardcoding hosts across the app.
 
-/** Base URL of the FastAPI backend, e.g. http://localhost:8000/api */
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api'
+/** Base URL of the FastAPI API, accepting either a host or a host plus `/api`. */
+function normalizeApiUrl(value: string | undefined): string {
+  const url = (value ?? 'http://localhost:8000').replace(/\/+$/, '')
+  return url.endsWith('/api') ? url : `${url}/api`
+}
+
+export const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL)
 
 /**
  * Browser navigation target that starts the Keycloak login flow.
