@@ -19,13 +19,17 @@ def kpis(tenant_id: UUID, _: TenantAccess, db: Session = Depends(get_db), window
     values = DashboardRepo(db, tenant_id).kpis(start_time(window))
     return {"data": {"openAlerts": values[0], "activeIncidents": values[1], "mitreCoverage": values[2], "meanTimeToTriage": values[3]}}
 
-@router.get("/v1/tenants/{tenant_id}/dashboard/alert-volume", response_model=AlertVolumeResponse)
-@router.get("/v1/tenants/{tenant_id}/alerts/volume", response_model=AlertVolumeResponse, include_in_schema=False)
-def alert_volume(tenant_id: UUID, _: TenantAccess, db: Session = Depends(get_db), range: Literal["24h", "7d", "30d", "90d"] = Query("24h"), granularity: Literal["hour", "day", "week", "month"] = Query("hour")):
-    return {"buckets": DashboardRepo(db, tenant_id).volume(start_time(range), granularity)}
+@router.get("/v1/tenants/{tenant_id}/dashboard/alert-volume", response_model=AlertVolumeResponse, include_in_schema=False)
+@router.get("/v1/tenants/{tenant_id}/alerts/volume", response_model=AlertVolumeResponse)
+def alert_volume(tenant_id: UUID, _: TenantAccess, db: Session = Depends(get_db), range: Literal["hourly", "daily", "weekly", "monthly", "yearly", "24h", "7d", "30d", "90d"] = Query("daily"), granularity: Literal["hour", "day", "week", "month"] | None = Query(None)):
+    range_to_window = {"hourly": "24h", "daily": "7d", "weekly": "30d", "monthly": "90d", "yearly": "90d"}
+    range_to_granularity = {"hourly": "hour", "daily": "day", "weekly": "week", "monthly": "month", "yearly": "month"}
+    window = range_to_window.get(range, range)
+    bucket_granularity = granularity or range_to_granularity.get(range, "hour")
+    return {"buckets": DashboardRepo(db, tenant_id).volume(start_time(window), bucket_granularity)}
 
-@router.get("/v1/tenants/{tenant_id}/dashboard/severity-breakdown", response_model=SeverityResponse)
-@router.get("/v1/tenants/{tenant_id}/alerts/severity-breakdown", response_model=SeverityResponse, include_in_schema=False)
+@router.get("/v1/tenants/{tenant_id}/dashboard/severity-breakdown", response_model=SeverityResponse, include_in_schema=False)
+@router.get("/v1/tenants/{tenant_id}/alerts/severity-breakdown", response_model=SeverityResponse)
 def severity_breakdown(tenant_id: UUID, _: TenantAccess, db: Session = Depends(get_db), window: Literal["24h", "7d", "30d", "90d"] = Query("24h")):
     return {"data": DashboardRepo(db, tenant_id).severity(start_time(window))}
 
