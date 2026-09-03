@@ -256,7 +256,7 @@ function EventDetail({
 }
 
 export function SecurityEventsTable({
-  tenantId: _tenantId,
+  tenantId,
 }: {
   tenantId: string
 }) {
@@ -321,7 +321,7 @@ export function SecurityEventsTable({
         setRefreshing(false)
       }
     },
-    [currentPage, severity, status, trimmedQuery],
+    [currentPage, severity, status, tenantId, trimmedQuery],
   )
 
   useEffect(() => {
