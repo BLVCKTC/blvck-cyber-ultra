@@ -2,6 +2,12 @@ import { authenticatedFetch } from './client'
 
 const SECURITY_EVENTS_ENDPOINT = '/api/security-events'
 
+function tenantSecurityEventsEndpoint(tenantId?: string): string {
+  return tenantId
+    ? `/api/v1/tenants/${encodeURIComponent(tenantId)}/security-events`
+    : SECURITY_EVENTS_ENDPOINT
+}
+
 export type SecurityEventSeverity =
   | 'info'
   | 'low'
@@ -250,6 +256,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 async function apiFetch(
+  tenantId: string | undefined,
   endpoint = '',
   options: RequestInit = {},
 ): Promise<Response> {
@@ -261,7 +268,7 @@ async function apiFetch(
     headers.set('Content-Type', 'application/json')
   }
 
-  return authenticatedFetch(`${SECURITY_EVENTS_ENDPOINT}${endpoint}`, {
+  return authenticatedFetch(`${tenantSecurityEventsEndpoint(tenantId)}${endpoint}`, {
     ...options,
     headers,
   })
@@ -273,24 +280,27 @@ function hasUpdateFields(updates: SecurityEventUpdate): boolean {
 
 export async function getSecurityEvents(
   filters: SecurityEventFilters = {},
+  tenantId?: string,
 ): Promise<SecurityEventListResponse> {
-  const response = await apiFetch(buildQueryString(filters))
+  const response = await apiFetch(tenantId, buildQueryString(filters))
 
   return handleResponse<SecurityEventListResponse>(response)
 }
 
 export async function getSecurityEvent(
   eventId: string,
+  tenantId?: string,
 ): Promise<SecurityEvent> {
-  const response = await apiFetch(getEventPath(eventId))
+  const response = await apiFetch(tenantId, getEventPath(eventId))
 
   return handleResponse<SecurityEvent>(response)
 }
 
 export async function createSecurityEvent(
   event: SecurityEventCreate,
+  tenantId?: string,
 ): Promise<SecurityEvent> {
-  const response = await apiFetch('', {
+  const response = await apiFetch(tenantId, '', {
     method: 'POST',
     body: JSON.stringify(event),
   })
@@ -301,12 +311,13 @@ export async function createSecurityEvent(
 export async function updateSecurityEvent(
   eventId: string,
   updates: SecurityEventUpdate,
+  tenantId?: string,
 ): Promise<SecurityEvent> {
   if (!hasUpdateFields(updates)) {
     throw new TypeError('At least one defined update field is required.')
   }
 
-  const response = await apiFetch(getEventPath(eventId), {
+  const response = await apiFetch(tenantId, getEventPath(eventId), {
     method: 'PATCH',
     body: JSON.stringify(updates),
   })
@@ -314,8 +325,8 @@ export async function updateSecurityEvent(
   return handleResponse<SecurityEvent>(response)
 }
 
-export async function deleteSecurityEvent(eventId: string): Promise<void> {
-  const response = await apiFetch(getEventPath(eventId), {
+export async function deleteSecurityEvent(eventId: string, tenantId?: string): Promise<void> {
+  const response = await apiFetch(tenantId, getEventPath(eventId), {
     method: 'DELETE',
   })
 
