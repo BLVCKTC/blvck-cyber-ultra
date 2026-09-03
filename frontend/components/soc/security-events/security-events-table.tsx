@@ -290,15 +290,13 @@ export function SecurityEventsTable({
       }
 
       try {
-        // Tenant scoping is expected to be handled by authenticatedFetch.
-        // tenantId is retained in the component API for caller compatibility.
         const response = await getSecurityEvents({
           q: trimmedQuery || undefined,
           severity: severity === 'all' ? undefined : severity,
           status: status === 'all' ? undefined : status,
           limit: PAGE_SIZE,
           offset: (currentPage - 1) * PAGE_SIZE,
-        })
+        }, tenantId)
 
         if (requestId !== sequence.current) {
           return
@@ -378,7 +376,7 @@ export function SecurityEventsTable({
     try {
       const updated = await updateSecurityEvent(event.id, {
         status: 'processed',
-      })
+      }, tenantId)
 
       setEvents((items) =>
         items.map((item) => (item.id === event.id ? updated : item)),
