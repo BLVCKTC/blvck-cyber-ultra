@@ -2,6 +2,16 @@
 
 import { API_URL } from './config'
 
+/** Build canonical tenant-scoped API paths from the active dashboard route. */
+export function tenantApiPath(resource: string): string {
+  if (typeof window === 'undefined') return `${API_URL}/v1/tenants/${resource.replace(/^\//, '')}`
+  const match = window.location.pathname.match(new RegExp('/dashboard/([^/]+)'))
+  const tenantId = match?.[1]
+  return tenantId
+    ? `${API_URL}/v1/tenants/${encodeURIComponent(tenantId)}/${resource.replace(/^\//, '')}`
+    : `${API_URL}/${resource.replace(/^\//, '')}`
+}
+
 let refreshPromise: Promise<boolean> | null = null
 let logoutRequested = false
 

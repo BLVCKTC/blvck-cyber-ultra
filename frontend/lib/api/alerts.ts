@@ -1,4 +1,4 @@
-import { authenticatedFetch } from './client'
+import { authenticatedFetch, tenantApiPath } from './client'
 
 export type AlertSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical'
 
@@ -38,7 +38,7 @@ export interface AlertList {
   offset: number
 }
 
-const path = '/api/alerts'
+const path = () => tenantApiPath('alerts')
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await authenticatedFetch(url, {
@@ -69,11 +69,11 @@ export function getAlerts(
 
   const queryString = query.toString()
 
-  return request<AlertList>(queryString ? `${path}?${queryString}` : path)
+  return request<AlertList>(queryString ? `${path()}?${queryString}` : path())
 }
 
 export function getAlert(id: string) {
-  return request<Alert>(`${path}/${encodeURIComponent(id)}`)
+  return request<Alert>(`${path()}/${encodeURIComponent(id)}`)
 }
 
 export function createAlert(
@@ -87,7 +87,7 @@ export function createAlert(
     | 'updated_at'
   >,
 ) {
-  return request<Alert>(path, {
+  return request<Alert>(path(), {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -108,14 +108,14 @@ export function updateAlert(
     >
   >,
 ) {
-  return request<Alert>(`${path}/${encodeURIComponent(id)}`, {
+  return request<Alert>(`${path()}/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
 }
 
 export function deleteAlert(id: string) {
-  return request<void>(`${path}/${encodeURIComponent(id)}`, {
+  return request<void>(`${path()}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   })
 }

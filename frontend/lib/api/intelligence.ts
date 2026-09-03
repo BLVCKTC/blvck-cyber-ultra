@@ -1,4 +1,4 @@
-import { API_URL, authenticatedFetch } from './client'
+import { authenticatedFetch, tenantApiPath } from './client'
 
 export interface ApiAsset {
   id: string
@@ -12,7 +12,7 @@ export interface ApiAsset {
 }
 
 async function request<T>(path: string): Promise<T> {
-  const response = await authenticatedFetch(`${API_URL}${path}`, {
+  const response = await authenticatedFetch(tenantApiPath(path), {
     headers: { Accept: 'application/json' },
   })
   if (!response.ok) {
@@ -23,7 +23,7 @@ async function request<T>(path: string): Promise<T> {
 }
 
 export function getAssets() {
-  return request<ApiAsset[]>('/intelligence/assets')
+  return request<ApiAsset[]>(tenantApiPath('intelligence/assets'))
 }
 
 export const assetsKey = '/intelligence/assets'

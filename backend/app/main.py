@@ -139,6 +139,32 @@ app.include_router(
     prefix=settings.API_PREFIX,
 )
 
+# Canonical tenant-scoped resource namespace. Routers continue to expose their
+# legacy paths above, while this mount reuses the same handlers, services, and
+# authorization dependencies under /api/v1/tenants/{tenant_id}.
+for tenant_router in (
+    alerts_router,
+    security_events_router,
+    detection_rules_router,
+    investigations_router,
+    incidents_router,
+    intelligence_router,
+    operations_router,
+    audit_router,
+):
+    app.include_router(
+        tenant_router,
+        prefix=f"{settings.API_PREFIX}/v1/tenants/{{tenant_id}}",
+    )
+
+# Teams and memberships already include /tenants/{tenant_id} in their router
+# paths, so their canonical namespace is mounted one level higher.
+for tenant_collection_router in (teams_router, memberships_router):
+    app.include_router(
+        tenant_collection_router,
+        prefix=f"{settings.API_PREFIX}/v1",
+    )
+
 # ==========================================================
 # ROOT HEALTH CHECK
 # ==========================================================
