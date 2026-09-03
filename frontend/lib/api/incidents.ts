@@ -1,4 +1,4 @@
-import { API_URL, authenticatedFetch } from './client'
+import { authenticatedFetch, tenantApiPath } from './client'
 
 export type IncidentStatus = 'open' | 'investigating' | 'contained' | 'resolved'
 export type IncidentSeverity = 'critical' | 'high' | 'medium' | 'low'
@@ -16,7 +16,7 @@ export interface Incident {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await authenticatedFetch(`${API_URL}${path}`, {
+  const response = await authenticatedFetch(tenantApiPath(path), {
     ...init,
     headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
   })

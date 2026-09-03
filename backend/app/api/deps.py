@@ -118,23 +118,27 @@ def get_active_membership(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    tenant_id = request.cookies.get(ACTIVE_TENANT_COOKIE_NAME)
+    """Resolve the tenant from the URL when present, otherwise the legacy cookie.
+
+    Canonical tenant-scoped routes are authorized from the path and therefore do
+    not trust a client-controlled active-tenant cookie. Legacy routes retain
+    their cookie behavior for compatibility.
+    """
+    tenant_id = request.path_params.get("tenant_id") or request.cookies.get(ACTIVE_TENANT_COOKIE_NAME)
 
     if not tenant_id:
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="tenant_not_selected",
-        )
+        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="tenant_not_selected")
 
-    _set_session_context(db, user_id=str(user.id), tenant_id=str(tenant_id))
+    try:
+        tenant_uuid = UUID(str(tenant_id))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="invalid_tenant_id") from exc
 
-    membership = MembershipRepo(db).get_membership(user.id, tenant_id)
+    membership = MembershipRepo(db).get_membership(user.id, tenant_uuid)
     if membership is None:
-        raise HTTPException(
-            status_code=HTTP_403_FORBIDDEN,
-            detail="not_a_member",
-        )
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="not_a_member")
 
+    _set_session_context(db, user_id=str(user.id), tenant_id=str(membership.tenant_id))
     return membership
 
 def require_roles(allowed_roles: list[str]):
