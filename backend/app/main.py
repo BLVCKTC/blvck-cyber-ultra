@@ -88,60 +88,8 @@ app.include_router(
 )
 
 
-app.include_router(
-    memberships_router,
-    prefix=settings.API_PREFIX,
-)
-
-
-app.include_router(
-    security_events_router,
-    prefix=settings.API_PREFIX,
-)
-
-app.include_router(
-    detection_rules_router,
-    prefix=settings.API_PREFIX,
-)
-
-app.include_router(
-    alerts_router,
-    prefix=settings.API_PREFIX,
-)
-
-app.include_router(
-    investigations_router,
-    prefix=settings.API_PREFIX,
-)
-
-app.include_router(
-    incidents_router,
-    prefix=settings.API_PREFIX,
-)
-
-app.include_router(
-    intelligence_router,
-    prefix=settings.API_PREFIX,
-)
-
-app.include_router(
-    operations_router,
-    prefix=settings.API_PREFIX,
-)
-
-app.include_router(
-    audit_router,
-    prefix=settings.API_PREFIX,
-)
-
-app.include_router(
-    teams_router,
-    prefix=settings.API_PREFIX,
-)
-
-# Canonical tenant-scoped resource namespace. Routers continue to expose their
-# legacy paths above, while this mount reuses the same handlers, services, and
-# authorization dependencies under /api/v1/tenants/{tenant_id}.
+# Canonical tenant-scoped resource namespace. Each router is mounted only here
+# so OpenAPI exposes one public interface per tenant-owned capability.
 for tenant_router in (
     alerts_router,
     security_events_router,

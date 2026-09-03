@@ -1,11 +1,9 @@
 import { authenticatedFetch } from './client'
 
-const SECURITY_EVENTS_ENDPOINT = '/api/security-events'
-
 function tenantSecurityEventsEndpoint(tenantId?: string): string {
-  return tenantId
-    ? `/api/v1/tenants/${encodeURIComponent(tenantId)}/security-events`
-    : SECURITY_EVENTS_ENDPOINT
+  const resolvedTenantId = tenantId ?? (typeof window !== 'undefined' ? window.location.pathname.match(/\/dashboard\/([^/]+)/)?.[1] : undefined)
+  if (!resolvedTenantId) throw new Error('A tenant context is required for security events.')
+  return `/api/v1/tenants/${encodeURIComponent(resolvedTenantId)}/security-events`
 }
 
 export type SecurityEventSeverity =

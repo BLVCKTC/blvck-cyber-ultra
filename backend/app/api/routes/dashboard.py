@@ -2,15 +2,11 @@ from typing import Annotated, Literal
 from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_tenant_membership, require_roles
+from app.api.deps import get_db, get_tenant_membership
 from app.db.repositories.dashboard_repo import DashboardRepo, start_time
 from app.schemas.dashboard import KPIResponse, AlertVolumeResponse, SeverityResponse, SourceResponse, CoverageResponse
 
 router = APIRouter(tags=["dashboard"])
-
-@router.get("/dashboard/summary")
-def summary(m=Depends(require_roles(["OWNER", "ADMIN", "SOC_MANAGER", "SOC_ANALYST"]))):
-    return {"tenant_id": str(m.tenant_id), "role": m.role.value if hasattr(m.role, "value") else str(m.role), "data": "secret tenant dashboard data"}
 
 TenantAccess = Annotated[object, Depends(get_tenant_membership)]
 
