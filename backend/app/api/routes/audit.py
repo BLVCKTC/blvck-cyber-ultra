@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.api.deps import get_active_membership, get_db, require_permission
-from app.db.models.foundation import AuditLogEntry
+from app.db.models.audit_log_entry import AuditLogEntry
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 

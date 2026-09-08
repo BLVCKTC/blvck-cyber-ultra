@@ -10,7 +10,9 @@ from app.db.models.enums import MembershipRole
 from app.db.models.membership import Membership
 from app.db.models.tenant import Tenant
 from app.schemas.tenant import TenantCreate, TenantUpdate
-
+from app.services.tenant_role_provisioning import ensure_tenant_role
+from backend.app.db.models import tenant
+from backend.app.schemas import membership
 
 class TenantService:
     def __init__(self, db: Session):
@@ -38,12 +40,15 @@ class TenantService:
         self.db.add(tenant)
         self.db.flush()
 
+        tenant_role = ensure_tenant_role(self.db, tenant_id=tenant.id, role=MembershipRole.OWNER)
+
         membership = Membership(
             user_id=owner_id,
             tenant_id=tenant.id,
             role=MembershipRole.OWNER,
+            tenant_role_id=tenant_role.id,
             is_default=True,
-        )
+    )
         self.db.add(membership)
         self.db.commit()
         self.db.refresh(tenant)

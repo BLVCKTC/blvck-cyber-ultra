@@ -15,6 +15,8 @@ from app.api.routes.intelligence import router as intelligence_router
 from app.api.routes.operations import router as operations_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.teams import router as teams_router
+from app.api.routes.security_settings import router as security_settings_router
+from app.api.routes.api_keys import router as api_keys_router
 
 from app.core.config import settings
 
@@ -87,6 +89,15 @@ app.include_router(
     prefix=settings.API_PREFIX,
 )
 
+app.include_router(
+    security_settings_router,
+    prefix=settings.API_PREFIX,
+)
+
+app.include_router(
+    api_keys_router,
+    prefix=settings.API_PREFIX,
+)
 
 # Canonical tenant-scoped resource namespace. Each router is mounted only here
 # so OpenAPI exposes one public interface per tenant-owned capability.

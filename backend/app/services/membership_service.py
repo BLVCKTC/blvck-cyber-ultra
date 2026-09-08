@@ -9,6 +9,9 @@ from app.db.models.membership import Membership
 from app.db.repositories.membership_repo import MembershipRepo
 from app.db.repositories.user_repo import UserRepo
 from app.schemas.membership import MembershipCreate, MembershipUpdate
+from app.services.tenant_role_provisioning import ensure_tenant_role
+from backend.app.api.routes.intelligence import tenant_id
+from backend.app.schemas import membership
 
 
 class MembershipService:
@@ -65,11 +68,14 @@ class MembershipService:
         if self.memberships.exists(payload.user_id, tenant_id):
             raise HTTPException(status_code=409, detail="user_already_member")
 
+        tenant_role = ensure_tenant_role(self.db, tenant_id=tenant_id, role=payload.role)
+
         try:
             return self.memberships.create(
                 user_id=payload.user_id,
                 tenant_id=tenant_id,
                 role=payload.role,
+                tenant_role_id=tenant_role.id,
                 is_default=payload.is_default,
             )
         except ValueError:
@@ -84,20 +90,18 @@ class MembershipService:
                 current_role=membership.role,
                 next_role=payload.role,
             )
-            membership = self.memberships.update_role(
-                membership=membership,
-                role=payload.role,
-            )
+            tenant_role = ensure_tenant_role(self.db, tenant_id=membership.tenant_id, role=payload.role)
+            membership.role = payload.role
+            membership.tenant_role_id = tenant_role.id
+            self.db.commit()
+            self.db.refresh(membership)
 
         if payload.is_default is True:
-            self.memberships.set_default(
-                user_id=membership.user_id,
-                tenant_id=membership.tenant_id,
-            )
+            self.memberships.set_default(user_id=membership.user_id, tenant_id=membership.tenant_id)
             membership = self._get_required_membership(membership_id)
 
         return membership
-
+    
     def remove_member(self, membership_id: UUID) -> None:
         membership = self._get_required_membership(membership_id)
 
