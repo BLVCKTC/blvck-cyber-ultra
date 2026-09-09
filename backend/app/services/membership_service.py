@@ -10,8 +10,9 @@ from app.db.repositories.membership_repo import MembershipRepo
 from app.db.repositories.user_repo import UserRepo
 from app.schemas.membership import MembershipCreate, MembershipUpdate
 from app.services.tenant_role_provisioning import ensure_tenant_role
-from backend.app.api.routes.intelligence import tenant_id
-from backend.app.schemas import membership
+from app.services.audit_service import record_audit_event
+from app.api.routes.intelligence import tenant_id
+from app.schemas import membership
 
 
 class MembershipService:
@@ -62,24 +63,26 @@ class MembershipService:
     def get(self, membership_id: UUID) -> Membership:
         return self._get_required_membership(membership_id)
 
-    def add_member(self, tenant_id: UUID, payload: MembershipCreate) -> Membership:
+    def add_member(self, tenant_id: UUID, payload: MembershipCreate, *, actor_user_id: UUID) -> Membership:
         self._get_required_user(payload.user_id)
-
         if self.memberships.exists(payload.user_id, tenant_id):
             raise HTTPException(status_code=409, detail="user_already_member")
 
         tenant_role = ensure_tenant_role(self.db, tenant_id=tenant_id, role=payload.role)
-
         try:
-            return self.memberships.create(
-                user_id=payload.user_id,
-                tenant_id=tenant_id,
-                role=payload.role,
-                tenant_role_id=tenant_role.id,
-                is_default=payload.is_default,
-            )
+            membership = self.memberships.create(
+                user_id=payload.user_id, tenant_id=tenant_id, role=payload.role,
+                tenant_role_id=tenant_role.id, is_default=payload.is_default,
+         )
         except ValueError:
             raise HTTPException(status_code=409, detail="user_already_member")
+
+        record_audit_event(
+            self.db, tenant_id=tenant_id, actor_user_id=actor_user_id,
+            action="membership.created", entity_type="membership", entity_id=membership.id,
+            payload={"target_user_id": str(payload.user_id), "role": payload.role.value},
+        )
+        return membership
 
     def update_member(self, membership_id: UUID, payload: MembershipUpdate) -> Membership:
         membership = self._get_required_membership(membership_id)

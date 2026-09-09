@@ -53,6 +53,22 @@ class DetectionRuleRead(DetectionRuleBase):
     created_at: datetime
     updated_at: datetime
     published_at: datetime | None
+    created_by_id: UUID | None
+    reviewed_by_id: UUID | None
+    reviewed_at: datetime | None
+    review_notes: str | None
+    approved_by_id: UUID | None
+    approved_at: datetime | None
+    approval_notes: str | None
+
+
+    @property
+    def authorship_recorded(self) -> bool:
+        return self.created_by_id is not None
+
+    @property
+    def forked_from_id(self) -> UUID | None:
+        return self.forked_from_id
 
 class DetectionRuleList(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -64,3 +80,4 @@ class DetectionRuleList(BaseModel):
 class DetectionRuleTransition(BaseModel):
     model_config = ConfigDict(extra="forbid")
     target_status: RuleStatus
+    notes: str | None = Field(default=None, max_length=4000)

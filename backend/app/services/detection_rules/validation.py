@@ -161,6 +161,10 @@ class RuleValidator:
             target_status,
             result,
         )
+
+        if target_status == DetectionRuleStatus.RETIRED:
+            return result
+
         self._validate_structure(rule, result)
         self._validate_mitre_ids(rule, result)
 

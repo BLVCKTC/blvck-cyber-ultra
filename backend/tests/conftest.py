@@ -41,11 +41,24 @@ os.environ.setdefault(
 )
 
 from dataclasses import dataclass, field  # noqa: E402
+from uuid import uuid4  # noqa: E402
 
 import pytest  # noqa: E402
 
 from app.api import deps  # noqa: E402
 from app.db.models.enums import MembershipRole  # noqa: E402
+
+
+# ======================================================================
+# TENANT IDS
+# ======================================================================
+# app.api.deps.get_active_membership requires tenant_id to parse as a real
+# UUID (UUID(str(tenant_id))) before it will even attempt a membership
+# lookup. Fixtures must use real UUID strings, not human-readable
+# placeholders like "TENANT-A" -- those fail UUID parsing with a 422
+# before the tenant-isolation logic under test ever runs.
+TENANT_A = str(uuid4())
+TENANT_B = str(uuid4())
 
 
 # ======================================================================
@@ -67,19 +80,30 @@ class FakeMembership:
 
     ``role`` is a real ``MembershipRole`` enum so that ``require_roles``
     exercises its ``.value`` unwrapping exactly as it does in production.
+
+    ``tenant_id`` defaults to ``TENANT_A`` (a real UUID string) rather than
+    a placeholder like ``"TENANT-A"``, since ``get_active_membership`` and
+    ``get_tenant_membership`` both parse/compare it as a UUID.
     """
 
     user_id: int = 1
-    tenant_id: str = "TENANT-A"
+    tenant_id: str = field(default_factory=lambda: TENANT_A)
     role: MembershipRole = MembershipRole.SOC_ANALYST
     tenant_role_id: int | None = 1
 
 
 class FakeRequest:
-    """Minimal Starlette-Request stand-in exposing only ``.cookies``."""
+    """Minimal Starlette-Request stand-in exposing only ``.cookies`` and
+    ``.path_params``.
+    """
 
-    def __init__(self, cookies: dict[str, str] | None = None):
+    def __init__(
+        self,
+        cookies: dict[str, str] | None = None,
+        path_params: dict[str, str] | None = None,
+    ):
         self.cookies = dict(cookies or {})
+        self.path_params = dict(path_params or {})
 
 
 def make_membership_repo(result):

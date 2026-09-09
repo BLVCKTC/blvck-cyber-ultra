@@ -11,8 +11,8 @@ from app.db.models.membership import Membership
 from app.db.models.tenant import Tenant
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.services.tenant_role_provisioning import ensure_tenant_role
-from backend.app.db.models import tenant
-from backend.app.schemas import membership
+from app.db.models import tenant
+from app.schemas import membership
 
 class TenantService:
     def __init__(self, db: Session):

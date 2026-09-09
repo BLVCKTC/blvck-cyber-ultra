@@ -10,7 +10,7 @@ from app.db.models.team_member import TeamMember
 from app.db.repositories.membership_repo import MembershipRepo
 from app.db.repositories.team_repo import TeamRepo
 from app.schemas.team import TeamCreate, TeamMemberCreate, TeamMemberUpdate, TeamUpdate
-
+from app.services.audit_service import record_audit_event
 
 class TeamService:
     """Business logic for teams and team membership."""
@@ -38,15 +38,17 @@ class TeamService:
     def get_team(self, team_id: UUID, tenant_id: UUID) -> Team:
         return self._get_required_team(team_id, tenant_id)
 
-    def create_team(self, tenant_id: UUID, payload: TeamCreate) -> Team:
+    def create_team(self, tenant_id: UUID, payload: TeamCreate, *, actor_user_id: UUID) -> Team:
         try:
-            return self.teams.create(
-                tenant_id=tenant_id,
-                name=payload.name,
-                description=payload.description,
-            )
+             team = self.teams.create(tenant_id=tenant_id, name=payload.name, description=payload.description)
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+        record_audit_event(
+            self.db, tenant_id=tenant_id, actor_user_id=actor_user_id,
+            action="team.created", entity_type="team", entity_id=team.id,
+            payload={"name": team.name},
+        )
+        return team
 
     def update_team(self, team_id: UUID, tenant_id: UUID, payload: TeamUpdate) -> Team:
         team = self._get_required_team(team_id, tenant_id)
@@ -55,8 +57,13 @@ class TeamService:
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    def delete_team(self, team_id: UUID, tenant_id: UUID) -> None:
+    def delete_team(self, team_id: UUID, tenant_id: UUID, *, actor_user_id: UUID) -> None:
         team = self._get_required_team(team_id, tenant_id)
+        record_audit_event(
+            self.db, tenant_id=tenant_id, actor_user_id=actor_user_id,
+            action="team.deleted", entity_type="team", entity_id=team.id,
+            payload={"name": team.name},
+        )
         self.teams.delete(team)
 
     def list_members(self, team_id: UUID, tenant_id: UUID) -> list[TeamMember]:
