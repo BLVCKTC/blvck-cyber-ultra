@@ -19,6 +19,7 @@ import app.services.detection_rule_service as detection_rule_service_module
 from app.db.models.detection_rule import DetectionRule, DetectionRuleStatus
 from app.services.detection_rule_service import (
     DetectionRuleService,
+    RuleValidationError,
     SeparationOfDutiesError,
 )
 
@@ -156,10 +157,12 @@ def test_different_reviewer_can_move_draft_to_testing(fake_repo):
         notes="Looks reasonable, testing against last 30d.",
     )
 
-    assert result.status == DetectionRuleStatus.TESTING.value
-    assert result.reviewed_by_id == reviewer_id
-    assert result.reviewed_at is not None
-    assert result.review_notes == "Looks reasonable, testing against last 30d."
+    assert result.rule.status == DetectionRuleStatus.TESTING.value
+    assert result.rule.reviewed_by_id == reviewer_id
+    assert result.rule.reviewed_at is not None
+    assert result.rule.review_notes == "Looks reasonable, testing against last 30d."
+    # No MITRE-mapping warning here — make_rule() sets a valid technique ID.
+    assert result.warnings == []
 
 
 def test_rule_with_no_author_on_file_does_not_block_review(fake_repo):
@@ -179,8 +182,8 @@ def test_rule_with_no_author_on_file_does_not_block_review(fake_repo):
         actor_id=reviewer_id,
     )
 
-    assert result.status == DetectionRuleStatus.TESTING.value
-    assert result.reviewed_by_id == reviewer_id
+    assert result.rule.status == DetectionRuleStatus.TESTING.value
+    assert result.rule.reviewed_by_id == reviewer_id
 
 
 # ======================================================================
@@ -232,9 +235,9 @@ def test_reviewer_can_also_be_approver(fake_repo):
         actor_id=reviewer_id,
     )
 
-    assert result.status == DetectionRuleStatus.APPROVED.value
-    assert result.approved_by_id == reviewer_id
-    assert result.approved_at is not None
+    assert result.rule.status == DetectionRuleStatus.APPROVED.value
+    assert result.rule.approved_by_id == reviewer_id
+    assert result.rule.approved_at is not None
 
 
 def test_cannot_approve_before_peer_review(fake_repo):
@@ -255,7 +258,11 @@ def test_cannot_approve_before_peer_review(fake_repo):
             actor_id=someone_else,
         )
 
+    # This is the plain ValueError raised directly in transition()'s
+    # approval-gate check, not a RuleValidationError from the validator —
+    # it has no .issues to inspect, only the message.
     assert not isinstance(exc_info.value, SeparationOfDutiesError)
+    assert not isinstance(exc_info.value, RuleValidationError)
     assert "peer review" in str(exc_info.value)
 
 
@@ -274,7 +281,7 @@ def test_invalid_transition_still_rejected_before_governance_checks(fake_repo):
     rule = make_rule(status=DetectionRuleStatus.TESTING, created_by_id=author_id)
     svc = build_service(fake_repo, rule)
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RuleValidationError) as exc_info:
         svc.transition(
             tenant_id=TENANT_ID,
             rule_id=rule.id,
@@ -282,4 +289,5 @@ def test_invalid_transition_still_rejected_before_governance_checks(fake_repo):
             actor_id=someone_else,
         )
 
-    assert "invalid_transition" in str(exc_info.value)
+    codes = {issue.code for issue in exc_info.value.issues}
+    assert "invalid_transition" in codes

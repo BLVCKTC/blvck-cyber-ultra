@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.db.models.enums import MembershipRole
@@ -11,8 +11,6 @@ from app.db.models.membership import Membership
 from app.db.models.tenant import Tenant
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.services.tenant_role_provisioning import ensure_tenant_role
-from app.db.models import tenant
-from app.schemas import membership
 
 class TenantService:
     def __init__(self, db: Session):
@@ -39,6 +37,16 @@ class TenantService:
         tenant = Tenant(**payload.model_dump())
         self.db.add(tenant)
         self.db.flush()
+        self.db.info["tenant_id"] = str(tenant.id)
+        self.db.info["user_id"] = str(owner_id)
+        self.db.execute(
+            text("SELECT set_config('app.tenant_id', :tid, true)"),
+            {"tid": str(tenant.id)},
+        )
+        self.db.execute(
+            text("SELECT set_config('app.user_id', :uid, true)"),
+            {"uid": str(owner_id)},
+        )
 
         tenant_role = ensure_tenant_role(self.db, tenant_id=tenant.id, role=MembershipRole.OWNER)
 
@@ -48,28 +56,29 @@ class TenantService:
             role=MembershipRole.OWNER,
             tenant_role_id=tenant_role.id,
             is_default=True,
-    )
+        )
         self.db.add(membership)
         self.db.commit()
         self.db.refresh(tenant)
         return tenant
 
     def update(self, tenant_id: str | UUID, payload: TenantUpdate) -> Tenant:
-        tenant = self.get(tenant_id)
-        update_data = payload.model_dump(exclude_unset=True)
-
-        if "slug" in update_data:
-            if self.db.scalar(select(Tenant).where(Tenant.slug == update_data["slug"], Tenant.id != tenant.id)):
-                raise HTTPException(status_code=409, detail="tenant_slug_already_exists")
-
-        for field, value in update_data.items():
-            setattr(tenant, field, value)
-
-        self.db.commit()
-        self.db.refresh(tenant)
-        return tenant
-
+            tenant = self.get(tenant_id)
+            update_data = payload.model_dump(exclude_unset=True)
+    
+            if "slug" in update_data:
+                if self.db.scalar(select(Tenant).where(Tenant.slug == update_data["slug"], Tenant.id != tenant.id)):
+                    raise HTTPException(status_code=409, detail="tenant_slug_already_exists")
+    
+            for field, value in update_data.items():
+                setattr(tenant, field, value)
+    
+            self.db.commit()
+            self.db.refresh(tenant)
+            return tenant
+    
     def delete(self, tenant_id: str | UUID) -> None:
-        tenant = self.get(tenant_id)
-        self.db.delete(tenant)
-        self.db.commit()
+            tenant = self.get(tenant_id)
+            self.db.delete(tenant)
+            self.db.commit()
+    

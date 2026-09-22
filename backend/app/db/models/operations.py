@@ -30,23 +30,12 @@ class IncidentAlert(Base):
     tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-class RuleVersion(Base):
-    __tablename__ = "rule_versions"
-    __table_args__ = (UniqueConstraint("detection_rule_id", "version", name="uq_rule_versions_rule_version"),)
-    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-    tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
-    detection_rule_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("detection_rules.id", ondelete="CASCADE"), nullable=False)
-    version: Mapped[int] = mapped_column(Integer, nullable=False)
-    definition: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    created_by: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
 class DetectionMatch(Base):
     __tablename__ = "detection_matches"
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     security_event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("security_events.id", ondelete="CASCADE"), nullable=False)
-    rule_version_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("rule_versions.id", ondelete="RESTRICT"), nullable=False)
+    detection_rule_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("detection_rules.id", ondelete="RESTRICT"), nullable=False)
     match_data: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     matched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

@@ -50,6 +50,7 @@ class DetectionRuleRead(DetectionRuleBase):
     model_config = ConfigDict(from_attributes=True, extra="forbid", use_enum_values=True)
     id: UUID
     tenant_id: UUID
+    forked_from_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
     published_at: datetime | None
@@ -66,10 +67,6 @@ class DetectionRuleRead(DetectionRuleBase):
     def authorship_recorded(self) -> bool:
         return self.created_by_id is not None
 
-    @property
-    def forked_from_id(self) -> UUID | None:
-        return self.forked_from_id
-
 class DetectionRuleList(BaseModel):
     model_config = ConfigDict(extra="forbid")
     items: list[DetectionRuleRead]
@@ -81,3 +78,28 @@ class DetectionRuleTransition(BaseModel):
     model_config = ConfigDict(extra="forbid")
     target_status: RuleStatus
     notes: str | None = Field(default=None, max_length=4000)
+
+class ValidationWarningOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str
+    message: str
+    field: str | None = None
+
+
+class DetectionRuleTransitionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rule: DetectionRuleRead
+    warnings: list[ValidationWarningOut] = Field(default_factory=list)
+
+class CanaryPromotionStatusOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+ 
+    rule_id: UUID
+    eligible: bool
+    reasons: list[str]
+    days_in_canary: float | None
+    canary_match_count: int
+    canary_rate_per_day: float | None
+    backtest_match_count: int | None
+    backtest_rate_per_day: float | None
+    deviation_percent: float | None

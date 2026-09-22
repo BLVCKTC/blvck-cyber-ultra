@@ -363,6 +363,17 @@ PERMISSIONS = [
      "",
      "critical"),
 
+    ("detections.transition",
+     "Transition Detection Rule Lifecycle",
+     "Detection",
+     "",
+     "high"),
+
+    ("detections.backtest",
+     "Backtest Detection Rules",
+     "Detection",
+     "",
+     "medium"),
 
     # Detection Analytics
 

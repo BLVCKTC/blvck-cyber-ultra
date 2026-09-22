@@ -34,7 +34,7 @@ from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_403_FORBIDDEN,
 )
-
+from uuid import uuid4
 from app.db.models.enums import MembershipRole
 
 from tests.conftest import (
@@ -52,23 +52,26 @@ from tests.conftest import (
 class TestTenantIsolation:
     """
     ``get_active_membership`` is the single seam that enforces tenancy. It
-    reads the ``tenant_id`` cookie and looks up a membership for
-    ``(user.id, tenant_id)``. If none exists the request is rejected 403 —
-    this is what stops a user in TENANT-A from reaching TENANT-B's data.
+    reads the tenant ID from the request and looks up a membership for
+    ``(user.id, tenant_id)``. If none exists the request is rejected with 403.
     """
 
     def test_cross_tenant_access_is_denied(
         self, deps_module, fake_user, fake_db, monkeypatch
     ):
-        # The attacker presents a valid session but points the tenant cookie
-        # at a tenant they do NOT belong to. The repo therefore finds nothing.
+        tenant_id = uuid4()
+
         monkeypatch.setattr(
             deps_module,
             "MembershipRepo",
             make_membership_repo(None),
         )
 
-        request = FakeRequest({deps_module.ACTIVE_TENANT_COOKIE_NAME: "TENANT-B"})
+        request = FakeRequest(
+            {
+                deps_module.ACTIVE_TENANT_COOKIE_NAME: str(tenant_id),
+            }
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             deps_module.get_active_membership(
@@ -83,8 +86,12 @@ class TestTenantIsolation:
     def test_same_tenant_member_is_allowed(
         self, deps_module, fake_user, fake_db, monkeypatch
     ):
-        # The user IS a member of the tenant they select -> membership returned.
-        membership = FakeMembership(user_id=fake_user.id, tenant_id="TENANT-A")
+        tenant_id = uuid4()
+
+        membership = FakeMembership(
+            user_id=fake_user.id,
+            tenant_id=tenant_id,
+        )
 
         monkeypatch.setattr(
             deps_module,
@@ -92,7 +99,11 @@ class TestTenantIsolation:
             make_membership_repo(membership),
         )
 
-        request = FakeRequest({deps_module.ACTIVE_TENANT_COOKIE_NAME: "TENANT-A"})
+        request = FakeRequest(
+            {
+                deps_module.ACTIVE_TENANT_COOKIE_NAME: str(tenant_id),
+            }
+        )
 
         result = deps_module.get_active_membership(
             request=request,
@@ -101,20 +112,18 @@ class TestTenantIsolation:
         )
 
         assert result is membership
-        assert result.tenant_id == "TENANT-A"
+        assert result.tenant_id == tenant_id
 
     def test_missing_tenant_cookie_is_denied(
         self, deps_module, fake_user, fake_db, monkeypatch
     ):
-        # No tenant selected at all -> 401 before any membership lookup runs.
-        # Guard the repo so an accidental lookup would blow up the test.
         monkeypatch.setattr(
             deps_module,
             "MembershipRepo",
             make_membership_repo(FakeMembership()),
         )
 
-        request = FakeRequest({})  # no tenant cookie
+        request = FakeRequest({})
 
         with pytest.raises(HTTPException) as exc_info:
             deps_module.get_active_membership(

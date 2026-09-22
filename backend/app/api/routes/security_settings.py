@@ -38,4 +38,4 @@ def update_security_settings(
     svc: SecuritySettingService = Depends(service),
 ):
     _assert_tenant_matches(membership, tenant_id)
-    return svc.update(membership.tenant_id, payload, actor_user_id=membership.user_id)
+    return svc.update(membership.tenant_id, payload, actor_user_id=membership.user_id)    

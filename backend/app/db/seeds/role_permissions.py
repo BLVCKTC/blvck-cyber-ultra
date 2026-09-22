@@ -86,6 +86,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "detections.update",
         "detections.delete",
         "detections.deploy",
+        "detections.transition",
+        "detections.backtest",
 
         # Detection Engineering
         "detection.analytics.view",
@@ -212,6 +214,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "detections.update",
         "detections.delete",
         "detections.deploy",
+        "detections.transition",
+        "detections.backtest",
 
         # Detection Engineering
         "detection.analytics.view",
@@ -306,6 +310,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "detections.create",
         "detections.update",
         "detections.deploy",
+        "detections.transition",
+        "detections.backtest",
 
         # Detection Engineering
         "detection.analytics.view",
@@ -369,7 +375,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
 
         # Forensics
         "forensics.view",
-
+        "forensics.manage",
+        
         # Reports
         "reports.view",
 
@@ -401,6 +408,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
 
         # Forensics
         "forensics.view",
+        "forensics.manage",
 
         # Reports
         "reports.view",

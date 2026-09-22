@@ -4,16 +4,7 @@ import enum
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import (
-    CheckConstraint,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Text,
-    func,
-    text,
+from sqlalchemy import (CheckConstraint,DateTime,ForeignKey,Index,Integer,String,Text,func,text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -95,10 +86,6 @@ class DetectionRule(Base):
         ),
     )
 
-    # ------------------------------------------------------------------
-    # Identity / tenancy
-    # ------------------------------------------------------------------
-
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         primary_key=True,
@@ -114,10 +101,6 @@ class DetectionRule(Base):
         nullable=False,
         index=True,
     )
-
-    # ------------------------------------------------------------------
-    # Detection rule definition
-    # ------------------------------------------------------------------
 
     name: Mapped[str] = mapped_column(
         String(255),
@@ -178,10 +161,6 @@ class DetectionRule(Base):
         String(255),
     )
 
-    # ------------------------------------------------------------------
-    # Lifecycle / governance
-    # ------------------------------------------------------------------
-
     status: Mapped[str] = mapped_column(
         String(16),
         nullable=False,
@@ -202,9 +181,9 @@ class DetectionRule(Base):
         server_default=text("true"),
     )
 
-    # ------------------------------------------------------------------
-    # Rule authorship
-    # ------------------------------------------------------------------
+    canary_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+    )
 
     created_by_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -213,10 +192,6 @@ class DetectionRule(Base):
             ondelete="SET NULL",
         ),
     )
-
-    # ------------------------------------------------------------------
-    # Peer review
-    # ------------------------------------------------------------------
 
     reviewed_by_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -234,10 +209,6 @@ class DetectionRule(Base):
         Text,
     )
 
-    # ------------------------------------------------------------------
-    # Approval
-    # ------------------------------------------------------------------
-
     approved_by_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey(
@@ -254,24 +225,6 @@ class DetectionRule(Base):
         Text,
     )
 
-    # ------------------------------------------------------------------
-    # Revision / lineage
-    # ------------------------------------------------------------------
-    #
-    # A revision is a new detection rule row that points back to the rule
-    # from which it was forked.
-    #
-    # Example:
-    #
-    #   Rule v1 (PRODUCTION)
-    #       |
-    #       └── Rule v2 (DRAFT)
-    #               |
-    #               └── forked_from_id = v1.id
-    #
-    # SET NULL ensures deleting the parent does not delete the revision.
-    #
-
     forked_from_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey(
@@ -280,10 +233,6 @@ class DetectionRule(Base):
         ),
         index=True,
     )
-
-    # ------------------------------------------------------------------
-    # Audit timestamps
-    # ------------------------------------------------------------------
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -302,14 +251,8 @@ class DetectionRule(Base):
         DateTime(timezone=True),
     )
 
-    # ------------------------------------------------------------------
-    # Computed helpers
-    # ------------------------------------------------------------------
-
     @property
     def is_production_eligible(self) -> bool:
-        """Return whether the rule is currently active in production."""
-
         return (
             self.status == DetectionRuleStatus.PRODUCTION
             and self.enabled

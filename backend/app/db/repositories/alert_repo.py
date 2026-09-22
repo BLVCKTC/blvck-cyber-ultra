@@ -29,3 +29,7 @@ class AlertRepository:
         self.db.commit(); self.db.refresh(item); return item
     def delete(self, *, tenant_id: UUID, alert_id: UUID) -> bool:
         result = self.db.execute(delete(Alert).where(Alert.id == alert_id, Alert.tenant_id == tenant_id)); self.db.commit(); return bool(result.rowcount)
+    def get_by_fingerprint(self, *, tenant_id: UUID, fingerprint: str):
+        return self.db.scalar(
+            select(Alert).where(Alert.tenant_id == tenant_id, Alert.fingerprint == fingerprint)
+        )

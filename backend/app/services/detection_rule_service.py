@@ -1,45 +1,105 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.db.models.detection_rule import DetectionRuleStatus
-from app.db.repositories.detection_rule_repo import DetectionRuleRepository
-from app.schemas.detection_rule import (
-    DetectionRuleCreate,
-    DetectionRuleUpdate,
+from app.db.models.detection_rule import (
+    DetectionRule,
+    DetectionRuleStatus,
 )
-from app.services.detection_rules.validation import RuleValidator
+from app.db.repositories.detection_rule_repo import DetectionRuleRepository
+from app.db.repositories.mitre_repo import MitreRepo
+from app.services.detection_rules.validation import (
+    RuleValidator,
+    ValidationIssue,
+    ValidationSeverity,
+)
 
 
 class SeparationOfDutiesError(ValueError):
-    """Raised when the same identity would fill two required distinct roles."""
+    pass
 
 
 class RuleLockedError(ValueError):
-    """Raised when a direct edit is attempted on an approved/live rule.
+    pass
 
-    Approved and live rules cannot be modified in place because doing so
-    would silently change detection logic after it has been reviewed or
-    deployed.
 
-    Use ``propose_revision`` to fork the rule into a new draft instead.
-    """
+class RuleValidationError(ValueError):
+    def __init__(
+        self,
+        message: str,
+        issues: list[ValidationIssue],
+    ) -> None:
+        super().__init__(message)
+        self.issues = issues
+
+
+@dataclass(slots=True)
+class RuleTransitionResult:
+    rule: DetectionRule
+    warnings: list[ValidationIssue]
+
 
 _LOCKED_FOR_DIRECT_EDIT = {
+    DetectionRuleStatus.TESTING,
+    DetectionRuleStatus.BACKTESTED,
+    DetectionRuleStatus.CANARY,
     DetectionRuleStatus.APPROVED,
     DetectionRuleStatus.PRODUCTION,
     DetectionRuleStatus.MONITORED,
     DetectionRuleStatus.TUNED,
 }
 
+
 _SUPERSEDABLE_LIVE_STATUSES = {
     DetectionRuleStatus.PRODUCTION,
     DetectionRuleStatus.MONITORED,
     DetectionRuleStatus.TUNED,
 }
+
+
+_ALLOWED_TRANSITIONS: dict[
+    DetectionRuleStatus,
+    set[DetectionRuleStatus],
+] = {
+    DetectionRuleStatus.DRAFT: {
+        DetectionRuleStatus.TESTING,
+        DetectionRuleStatus.RETIRED,
+    },
+    DetectionRuleStatus.TESTING: {
+        DetectionRuleStatus.BACKTESTED,
+        DetectionRuleStatus.RETIRED,
+    },
+    DetectionRuleStatus.BACKTESTED: {
+        DetectionRuleStatus.CANARY,
+        DetectionRuleStatus.RETIRED,
+    },
+    DetectionRuleStatus.CANARY: {
+        DetectionRuleStatus.APPROVED,
+        DetectionRuleStatus.RETIRED,
+    },
+    DetectionRuleStatus.APPROVED: {
+        DetectionRuleStatus.PRODUCTION,
+        DetectionRuleStatus.RETIRED,
+    },
+    DetectionRuleStatus.PRODUCTION: {
+        DetectionRuleStatus.MONITORED,
+        DetectionRuleStatus.RETIRED,
+    },
+    DetectionRuleStatus.MONITORED: {
+        DetectionRuleStatus.TUNED,
+        DetectionRuleStatus.RETIRED,
+    },
+    DetectionRuleStatus.TUNED: {
+        DetectionRuleStatus.RETIRED,
+    },
+    DetectionRuleStatus.RETIRED: set(),
+}
+
 
 _FORKABLE_FIELDS = {
     "name",
@@ -56,57 +116,85 @@ _FORKABLE_FIELDS = {
 }
 
 
+_UPDATABLE_FIELDS = (
+    _FORKABLE_FIELDS | {"enabled"}
+) - {"mitre_technique_ids"}
+
+
+_RELATIONSHIP_FIELDS = {
+    "mitre_technique_ids",
+}
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class DetectionRuleService:
-    """Application service for detection-rule lifecycle management.
+    def __init__(
+        self,
+        db: Session | None = None,
+        rules: DetectionRuleRepository | None = None,
+        mitre_repo: MitreRepo | None = None,
+        validator: RuleValidator | None = None,
+    ) -> None:
+        self.db = db
 
-    This service is responsible for:
+        if rules is None:
+            if db is None:
+                raise ValueError("Either db or rules must be provided")
+            rules = DetectionRuleRepository(db)
 
-    - tenant-scoped rule access
-    - rule creation
-    - direct editing of pre-approval rules
-    - immutable approved/live rules
-    - revision/fork creation
-    - lifecycle transitions
-    - separation-of-duties enforcement
-    - automatic retirement of superseded live rules
-    """
+        if mitre_repo is None:
+            if db is None:
+                raise ValueError("Either db or mitre_repo must be provided")
+            mitre_repo = MitreRepo(db)
 
-    MAX_LIMIT = 500
-
-    def __init__(self, db: Session):
-        self.rules = DetectionRuleRepository(db)
-        self.validator = RuleValidator()
+        self.rules = rules
+        self.mitre_repo = mitre_repo
+        self.validator = validator or RuleValidator()
 
     def create(
         self,
         *,
         tenant_id: UUID,
-        payload: DetectionRuleCreate,
-        actor_id: UUID,
-    ):
-        """Create a new detection rule.
+        payload: Any | None = None,
+        data: dict[str, Any] | None = None,
+        actor_id: UUID | None = None,
+    ) -> DetectionRule:
+        if payload is not None:
+            if isinstance(payload, dict):
+                rule_data = dict(payload)
+            else:
+                rule_data = payload.model_dump(exclude_unset=True)
+        elif data is not None:
+            rule_data = dict(data)
+        else:
+            raise ValueError("Either payload or data must be provided")
 
-        New rules are created through the repository after attaching the
-        identity of the actor who created the rule.
-        """
+        rule_data.pop("tenant_id", None)
 
-        data = payload.model_dump(mode="python")
+        if actor_id is not None:
+            rule_data.setdefault("created_by_id", actor_id)
 
-        data["created_by_id"] = actor_id
-
-        return self.rules.create(
-            tenant_id=tenant_id,
-            data=data,
+        rule_data.setdefault(
+            "status",
+            DetectionRuleStatus.DRAFT.value,
         )
+
+        rule = self.rules.create(
+            tenant_id=tenant_id,
+            data=rule_data,
+        )
+
+        return rule
 
     def get(
         self,
         *,
         tenant_id: UUID,
         rule_id: UUID,
-    ):
-        """Retrieve a detection rule within the specified tenant."""
-
+    ) -> DetectionRule | None:
         return self.rules.get(
             tenant_id=tenant_id,
             rule_id=rule_id,
@@ -116,57 +204,40 @@ class DetectionRuleService:
         self,
         *,
         tenant_id: UUID,
-        limit: int = 50,
+        status: DetectionRuleStatus | None = None,
+        enabled: bool | None = None,
+        limit: int = 100,
         offset: int = 0,
-        **filters,
-    ):
-        """Return a paginated tenant-scoped list of detection rules."""
-
-        if not 1 <= limit <= self.MAX_LIMIT:
-            raise ValueError(
-                f"limit must be between 1 and {self.MAX_LIMIT}"
-            )
-
-        if offset < 0:
-            raise ValueError(
-                "offset must be greater than or equal to 0"
-            )
-
-        items = self.rules.list(
+    ) -> list[DetectionRule]:
+        return self.rules.list(
             tenant_id=tenant_id,
+            status=status,
+            enabled=enabled,
             limit=limit,
             offset=offset,
-            **filters,
         )
 
-        total = self.rules.count(
-            tenant_id=tenant_id,
-            **filters,
-        )
+    def ensure_editable(
+        self,
+        rule: DetectionRule,
+    ) -> None:
+        status = self._status(rule)
 
-        return items, total
+        if status != DetectionRuleStatus.DRAFT:
+            raise RuleLockedError(
+                f"Rule '{rule.id}' is locked because it is "
+                f"in '{status.value}' status. Create a revision "
+                f"before making changes."
+            )
 
     def update(
         self,
         *,
         tenant_id: UUID,
         rule_id: UUID,
-        payload: DetectionRuleUpdate,
-    ):
-        """Edit a rule in place.
-
-        Direct edits are allowed only before formal approval/live operation.
-
-        Locked states:
-            APPROVED
-            PRODUCTION
-            MONITORED
-            TUNED
-
-        If the rule is locked, ``RuleLockedError`` is raised and the caller
-        should use ``propose_revision`` instead.
-        """
-
+        data: dict[str, Any],
+        actor_id: UUID | None = None,
+    ) -> DetectionRule | None:
         rule = self.get(
             tenant_id=tenant_id,
             rule_id=rule_id,
@@ -175,28 +246,18 @@ class DetectionRuleService:
         if rule is None:
             return None
 
-        current_status = DetectionRuleStatus(rule.status)
+        self.ensure_editable(rule)
+        self._validate_update_fields(data)
 
-        if current_status in _LOCKED_FOR_DIRECT_EDIT:
-            raise RuleLockedError(
-                f"Rule is '{rule.status}' and cannot be edited directly; "
-                "propose a revision instead"
-            )
+        payload = dict(data)
 
-        data = payload.model_dump(
-            mode="python",
-            exclude_unset=True,
-        )
-
-        if not data:
-            raise ValueError(
-                "update payload must contain at least one field"
-            )
+        if actor_id is not None:
+            payload["updated_by_id"] = actor_id
 
         return self.rules.update(
             tenant_id=tenant_id,
             rule_id=rule_id,
-            data=data,
+            data=payload,
         )
 
     def delete(
@@ -204,8 +265,16 @@ class DetectionRuleService:
         *,
         tenant_id: UUID,
         rule_id: UUID,
-    ):
-        """Delete a detection rule."""
+    ) -> bool:
+        rule = self.get(
+            tenant_id=tenant_id,
+            rule_id=rule_id,
+        )
+
+        if rule is None:
+            return False
+
+        self.ensure_editable(rule)
 
         return self.rules.delete(
             tenant_id=tenant_id,
@@ -216,101 +285,66 @@ class DetectionRuleService:
         self,
         *,
         tenant_id: UUID,
-        rule_id: UUID,
-        payload: DetectionRuleUpdate,
+        source_rule_id: UUID,
         actor_id: UUID,
-    ):
-        """Fork a rule into a new DRAFT revision.
-
-        The source rule is never modified.
-
-        This is particularly important for APPROVED and live rules because
-        their current content must remain auditable and reproducible while
-        the proposed changes go through the detection lifecycle again.
-
-        Example:
-
-            v1 PRODUCTION
-                |
-                +----> v2 DRAFT
-                         |
-                         +--> TESTING
-                         +--> BACKTESTED
-                         +--> CANARY
-                         +--> APPROVED
-                         +--> PRODUCTION
-
-        The new revision starts its own governance lifecycle.
-        """
-
+        overrides: dict[str, Any] | None = None,
+    ) -> DetectionRule:
         source = self.get(
             tenant_id=tenant_id,
-            rule_id=rule_id,
+            rule_id=source_rule_id,
         )
 
         if source is None:
-            return None
+            raise ValueError("Source detection rule not found")
 
-        changes = payload.model_dump(
-            mode="python",
-            exclude_unset=True,
-        )
+        source_status = self._status(source)
 
-        unknown = set(changes) - _FORKABLE_FIELDS
-
-        if unknown:
-            raise ValueError(
-                f"Cannot revise fields: {sorted(unknown)}"
+        if source_status not in _LOCKED_FOR_DIRECT_EDIT:
+            raise RuleLockedError(
+                f"Rule '{source.id}' is not in a revision-eligible "
+                f"locked state."
             )
 
-        # Copy only approved content fields from the source.
-        base = {
-            field: getattr(source, field)
-            for field in _FORKABLE_FIELDS
-        }
-
-        # Apply the analyst/operator's proposed changes.
-        base.update(changes)
-
-        base.update(
-            status=DetectionRuleStatus.DRAFT.value,
-            version=source.version + 1,
-            enabled=True,
-            forked_from_id=source.id,
-            created_by_id=actor_id,
+        data = self._build_revision_data(
+            source=source,
+            overrides=overrides or {},
+            actor_id=actor_id,
         )
 
-        return self.rules.create(
+        source_techniques = self.mitre_repo.list_techniques_for_rule(
+            source.id
+        )
+
+        data["mitre_technique_ids"] = [
+            technique.mitre_id
+            for technique in source_techniques
+            if technique.mitre_id
+        ]
+
+        revision = self.rules.create(
             tenant_id=tenant_id,
-            data=base,
+            data=data,
         )
+
+        self.mitre_repo.copy_rule_techniques(
+            source_rule_id=source.id,
+            target_rule_id=revision.id,
+            created_by=actor_id,
+        )
+
+        return revision
 
     def transition(
         self,
         *,
         tenant_id: UUID,
         rule_id: UUID,
-        target_status: str,
+        target_status: DetectionRuleStatus | str,
         actor_id: UUID,
         notes: str | None = None,
-    ):
-        """Move a detection rule through its governed lifecycle.
-
-        Lifecycle:
-
-            DRAFT
-              -> TESTING
-              -> BACKTESTED
-              -> CANARY
-              -> APPROVED
-              -> PRODUCTION
-              -> MONITORED
-              -> TUNED / RETIRED
-
-        Governance checks such as peer-review and approval separation of
-        duties are enforced here rather than trusting the API client.
-        """
-
+        review_notes: str | None = None,
+        approval_notes: str | None = None,
+    ) -> RuleTransitionResult | None:
         rule = self.get(
             tenant_id=tenant_id,
             rule_id=rule_id,
@@ -319,14 +353,13 @@ class DetectionRuleService:
         if rule is None:
             return None
 
-        try:
-            target = DetectionRuleStatus(target_status)
-        except ValueError as exc:
-            raise ValueError(
-                f"Unknown detection rule status '{target_status}'"
-            ) from exc
+        current = self._status(rule)
+        target = self._parse_status(target_status)
 
-        current = DetectionRuleStatus(rule.status)
+        self._validate_transition(
+            current=current,
+            target=target,
+        )
 
         validation = self.validator.validate_for_transition(
             rule,
@@ -334,64 +367,47 @@ class DetectionRuleService:
         )
 
         if not validation.passed:
-            messages = "; ".join(
+            message = "; ".join(
                 f"[{issue.code}] {issue.message}"
                 for issue in validation.errors
             )
-
-            raise ValueError(
-                "Rule failed validation for transition "
-                f"'{rule.status}' -> '{target_status}': {messages}"
+            raise RuleValidationError(
+                f"Rule failed validation for transition "
+                f"'{current.value}' -> '{target.value}': {message}",
+                issues=validation.errors,
             )
 
-        # Base transition update.
-        data: dict = {
-            "status": target_status,
+        self._enforce_separation_of_duties(
+            rule=rule,
+            current=current,
+            target=target,
+            actor_id=actor_id,
+        )
+
+        now = _utcnow()
+
+        data: dict[str, Any] = {
+            "status": target.value,
         }
 
-        if (
-            current == DetectionRuleStatus.DRAFT
-            and target == DetectionRuleStatus.TESTING
-        ):
-            # The author cannot perform their own peer review.
-            if (
-                rule.created_by_id is not None
-                and actor_id == rule.created_by_id
-            ):
-                raise SeparationOfDutiesError(
-                    "The rule's author cannot perform its peer review"
-                )
-
-            data.update(
-                reviewed_by_id=actor_id,
-                reviewed_at=datetime.now(timezone.utc),
-                review_notes=notes,
+        if target == DetectionRuleStatus.TESTING:
+            data["reviewed_by_id"] = actor_id
+            data["reviewed_at"] = now
+            data["review_notes"] = (
+                review_notes if review_notes is not None else notes
             )
-
+        if target == DetectionRuleStatus.CANARY:
+            data["canary_started_at"] = now
+            
         if target == DetectionRuleStatus.APPROVED:
-            # A rule must have completed peer review first.
-            if rule.reviewed_by_id is None:
-                raise ValueError(
-                    "Rule cannot be approved before it has completed "
-                    "peer review"
-                )
-
-            if (
-                rule.created_by_id is not None
-                and actor_id == rule.created_by_id
-            ):
-                raise SeparationOfDutiesError(
-                    "The rule's author cannot approve it for production"
-                )
-
-            data.update(
-                approved_by_id=actor_id,
-                approved_at=datetime.now(timezone.utc),
-                approval_notes=notes,
+            data["approved_by_id"] = actor_id
+            data["approved_at"] = now
+            data["approval_notes"] = (
+                approval_notes if approval_notes is not None else notes
             )
 
         if target == DetectionRuleStatus.PRODUCTION:
-            data["published_at"] = datetime.now(timezone.utc)
+            data["published_at"] = now
 
         updated = self.rules.update(
             tenant_id=tenant_id,
@@ -399,41 +415,196 @@ class DetectionRuleService:
             data=data,
         )
 
-        if (
-            target == DetectionRuleStatus.PRODUCTION
-            and rule.forked_from_id is not None
-        ):
-            parent = self.get(
+        if updated is None:
+            return None
+
+        if target == DetectionRuleStatus.PRODUCTION:
+            self._retire_superseded_parent(
                 tenant_id=tenant_id,
-                rule_id=rule.forked_from_id,
+                rule=updated,
             )
 
-            if (
-                parent is not None
-                and DetectionRuleStatus(parent.status)
-                in _SUPERSEDABLE_LIVE_STATUSES
-            ):
-                self.rules.update(
-                    tenant_id=tenant_id,
-                    rule_id=parent.id,
-                    data={
-                        "status": DetectionRuleStatus.RETIRED.value,
-                    },
-                )
-
-        return updated
+        return RuleTransitionResult(
+            rule=updated,
+            warnings=validation.warnings,
+        )
 
     def list_production_rules(
         self,
         *,
         tenant_id: UUID,
-        limit: int = 500,
-        offset: int = 0,
-    ):
-        """Return production detection rules for a tenant."""
-
-        return self.rules.list_production_rules(
+    ) -> list[DetectionRule]:
+        return self.rules.list(
             tenant_id=tenant_id,
-            limit=limit,
-            offset=offset,
+            status=DetectionRuleStatus.PRODUCTION,
+            enabled=True,
+        )
+
+    @staticmethod
+    def _status(rule: DetectionRule) -> DetectionRuleStatus:
+        status = getattr(rule, "status", None)
+
+        if isinstance(status, DetectionRuleStatus):
+            return status
+
+        return DetectionRuleStatus(status)
+
+    @staticmethod
+    def _parse_status(
+        status: DetectionRuleStatus | str,
+    ) -> DetectionRuleStatus:
+        if isinstance(status, DetectionRuleStatus):
+            return status
+
+        return DetectionRuleStatus(status)
+
+    @staticmethod
+    def _validate_update_fields(
+        data: dict[str, Any],
+    ) -> None:
+        unknown = set(data) - _UPDATABLE_FIELDS
+
+        if unknown:
+            fields = ", ".join(sorted(unknown))
+            raise ValueError(
+                f"Fields cannot be updated directly: {fields}"
+            )
+
+    @staticmethod
+    def _validate_transition(
+        *,
+        current: DetectionRuleStatus,
+        target: DetectionRuleStatus,
+    ) -> None:
+        if current == target:
+            raise ValueError(
+                f"Rule is already in '{current.value}' status"
+            )
+
+        allowed_targets = _ALLOWED_TRANSITIONS.get(
+            current,
+            set(),
+        )
+
+        if target not in allowed_targets:
+            issue = ValidationIssue(
+                code="invalid_transition",
+                message=(
+                    f"Invalid detection rule transition: "
+                    f"'{current.value}' -> '{target.value}'"
+                ),
+                severity=ValidationSeverity.ERROR,
+                field="status",
+            )
+
+            raise RuleValidationError(
+                issue.message,
+                issues=[issue],
+            )
+
+    @staticmethod
+    def _enforce_separation_of_duties(
+        *,
+        rule: DetectionRule,
+        current: DetectionRuleStatus,
+        target: DetectionRuleStatus,
+        actor_id: UUID,
+    ) -> None:
+        if (
+            current == DetectionRuleStatus.DRAFT
+            and target == DetectionRuleStatus.TESTING
+            and rule.created_by_id is not None
+            and actor_id == rule.created_by_id
+        ):
+            raise SeparationOfDutiesError(
+                "The rule author cannot perform peer review"
+            )
+
+        if target == DetectionRuleStatus.APPROVED:
+            if rule.reviewed_by_id is None:
+                raise ValueError(
+                    "The rule must complete peer review before approval"
+                )
+
+            if (
+                rule.created_by_id is not None
+                and actor_id == rule.created_by_id
+            ):
+                raise SeparationOfDutiesError(
+                    "The rule author cannot approve the rule"
+                )
+
+    @staticmethod
+    def _build_revision_data(
+        *,
+        source: DetectionRule,
+        overrides: dict[str, Any],
+        actor_id: UUID,
+    ) -> dict[str, Any]:
+        invalid = set(overrides) - _FORKABLE_FIELDS
+
+        if invalid:
+            fields = ", ".join(sorted(invalid))
+            raise ValueError(
+                f"Fields cannot be overridden in a revision: {fields}"
+            )
+
+        data: dict[str, Any] = {
+            "name": source.name,
+            "description": source.description,
+            "rule_type": source.rule_type,
+            "severity": source.severity,
+            "query": source.query,
+            "configuration": source.configuration,
+            "tags": source.tags,
+            "mitre_technique_ids": source.mitre_technique_ids,
+            "mitre_tactic_ids": source.mitre_tactic_ids,
+            "author": source.author,
+            "source": source.source,
+            "status": DetectionRuleStatus.DRAFT.value,
+            "enabled": False,
+            "created_by_id": actor_id,
+            "forked_from_id": source.id,
+        }
+
+        data.update(overrides)
+
+        data["status"] = DetectionRuleStatus.DRAFT.value
+        data["enabled"] = False
+        data["created_by_id"] = actor_id
+        data["forked_from_id"] = source.id
+
+        return data
+
+    def _retire_superseded_parent(
+        self,
+        *,
+        tenant_id: UUID,
+        rule: DetectionRule,
+    ) -> None:
+        parent_id = getattr(rule, "forked_from_id", None)
+
+        if parent_id is None:
+            return
+
+        parent = self.get(
+            tenant_id=tenant_id,
+            rule_id=parent_id,
+        )
+
+        if parent is None:
+            return
+
+        parent_status = self._status(parent)
+
+        if parent_status not in _SUPERSEDABLE_LIVE_STATUSES:
+            return
+
+        self.rules.update(
+            tenant_id=tenant_id,
+            rule_id=parent.id,
+            data={
+                "status": DetectionRuleStatus.RETIRED.value,
+                "enabled": False,
+            },
         )

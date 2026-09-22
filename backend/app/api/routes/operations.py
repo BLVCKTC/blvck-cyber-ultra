@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_active_membership, get_current_user, get_db, require_permission
 from app.db.models.alert import Alert
 from app.db.models.membership import Membership
-from app.db.models.operations import AlertFeedback, DetectionMatch, Incident, ResponseAction, RuleVersion
+from app.db.models.operations import AlertFeedback, DetectionMatch, Incident, ResponseAction
 
 router = APIRouter(prefix="/operations", tags=["Security Operations"])
 
@@ -37,10 +37,6 @@ def _tenant(membership: Membership):
 
 def _action(db: Session, tenant_id: UUID, action_id: UUID):
     return db.scalar(select(ResponseAction).where(ResponseAction.id == action_id, ResponseAction.tenant_id == tenant_id))
-
-@router.get("/rule-versions", dependencies=[Depends(require_permission("detection_rules.view"))])
-def list_rule_versions(limit: int = Query(50, ge=1, le=500), offset: int = Query(0, ge=0), db: Session = Depends(get_db), membership=Depends(get_active_membership)):
-    return db.scalars(select(RuleVersion).where(RuleVersion.tenant_id == _tenant(membership)).order_by(RuleVersion.created_at.desc()).offset(offset).limit(limit)).all()
 
 @router.get("/detection-matches", dependencies=[Depends(require_permission("security_events.view"))])
 def list_detection_matches(limit: int = Query(50, ge=1, le=500), offset: int = Query(0, ge=0), db: Session = Depends(get_db), membership=Depends(get_active_membership)):
