@@ -44,19 +44,8 @@ export function AuthShell({
 
   return (
     <main className="relative isolate flex min-h-screen w-full overflow-hidden bg-background text-foreground">
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-20 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1696886816239-2VFwEjWK9MEpCIfklLjJ4AtEyy2pgD.jpg')",
-        }}
-      />
-      <div aria-hidden className="absolute inset-0 -z-10 bg-sidebar/90" />
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,hsl(var(--sidebar)/.98)_0%,hsl(var(--sidebar)/.84)_45%,hsl(var(--sidebar)/.42)_100%)]"
-      />
+      <div aria-hidden className="absolute inset-0 -z-20 bg-background" />
+      <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_82%_18%,hsl(var(--primary)/.12),transparent_34%),radial-gradient(circle_at_12%_88%,hsl(var(--sidebar-primary)/.08),transparent_32%)]" />
 
       <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-5 py-8 sm:px-8 lg:px-12">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-border/70 bg-card/80 shadow-2xl shadow-background/60 backdrop-blur-xl lg:grid-cols-[0.78fr_1.22fr]">
@@ -76,35 +65,28 @@ export function AuthShell({
             </div>
           </section>
 
-          <section className="relative order-1 flex min-h-[18rem] flex-col justify-between overflow-hidden bg-background p-7 text-foreground sm:p-10 lg:order-2 lg:min-h-[34rem] lg:p-12">
-            <div
-              aria-hidden
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pros-and-cons-scaled-2560x1280-NFKc0AGXh8GHMA8B6ndFSL4kjqAX43.jpeg')",
-              }}
-            />
-            <div className="relative flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] text-sidebar-foreground/85">
-              <span>BLVCK ID</span>
-              <span className="flex items-center gap-1.5">Online <span className="size-1.5 rounded-full bg-current" /></span>
+          <section className="relative order-1 flex min-h-[18rem] flex-col justify-between overflow-hidden bg-muted/30 p-7 text-foreground sm:p-10 lg:order-2 lg:min-h-[34rem] lg:p-12">
+            <div aria-hidden className="absolute inset-0 bg-[linear-gradient(145deg,transparent_0%,hsl(var(--primary)/.08)_52%,transparent_100%)]" />
+            <div className="relative flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+              <span>BLVCK CYBER</span>
+              <span>Secure access</span>
             </div>
             <div className="relative max-w-md">
-              <p className="mb-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/80">
+              <p className="mb-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                 <Terminal aria-hidden className="size-3.5" />
                 Security operations platform
               </p>
-              <h1 className="text-balance text-5xl font-semibold tracking-[-0.07em] text-sea-green sm:text-6xl lg:text-7xl">
+              <h1 className="text-balance text-5xl font-semibold tracking-[-0.07em] text-foreground sm:text-6xl lg:text-7xl">
                 {welcome}
                 {animateHero && welcome.length < welcomeText.length && <span aria-hidden className="ml-1 animate-pulse">|</span>}
               </h1>
-              <p className="mt-5 max-w-sm text-pretty text-sm leading-6 text-sea-green/90 sm:text-base">
+              <p className="mt-5 max-w-sm text-pretty text-sm leading-6 text-muted-foreground sm:text-base">
                 {description}
                 {animateHero && welcome.length === welcomeText.length && description.length < descriptionText.length && <span aria-hidden className="ml-0.5 animate-pulse">|</span>}
               </p>
             </div>
-            <div className="relative flex items-center justify-between gap-4 border-t border-sidebar-foreground/30 pt-5 font-mono text-[9px] uppercase tracking-[0.14em] text-sidebar-foreground/80">
-              <span>Encrypted access</span>
+            <div className="relative flex items-center justify-between gap-4 border-t border-border/70 pt-5 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
+              <span>Command center access</span>
               <ArrowUpRight aria-hidden className="size-4" />
             </div>
           </section>

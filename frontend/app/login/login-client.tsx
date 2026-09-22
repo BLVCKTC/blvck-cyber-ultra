@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, ShieldCheck } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 import { AuthShell } from '@/components/auth/auth-shell'
 import { AuthPrimaryButton, AuthErrorBanner } from '@/components/auth/fields'
@@ -87,29 +87,23 @@ export function LoginClient() {
   return (
     <AuthShell>
       <div className="mb-8 flex items-center justify-between gap-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5">
-          <span className="relative flex size-1.5">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
-            <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-primary">
-            Systems operational
-          </span>
-        </div>
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
           Secure access
+        </span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          BLVCK ID
         </span>
       </div>
 
       <div className="mb-8">
         <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-          Authenticate with BLVCK ID
+          BLVCK CYBER
         </p>
         <h2 className="text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-          Sign in to your command center.
+          Access your command center
         </h2>
         <p className="mt-3 text-pretty text-sm leading-6 text-muted-foreground">
-          Use your secure single sign-on to continue to BLVCK CYBER.
+          Sign in with your BLVCK ID to continue to BLVCK CYBER.
         </p>
       </div>
 
@@ -136,9 +130,8 @@ export function LoginClient() {
         )}
       </AuthPrimaryButton>
 
-      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-        <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
-        Your session is protected with encrypted, enterprise-grade authentication.
+      <p className="mt-4 text-xs leading-5 text-muted-foreground">
+        Authentication is handled through your organization&apos;s configured identity provider.
       </p>
 
       <p className="mt-8 text-sm text-muted-foreground">
@@ -151,12 +144,10 @@ export function LoginClient() {
         </Link>
       </p>
 
-      <div className="mt-8 flex flex-wrap gap-x-4 gap-y-2 border-t border-border/70 pt-5">
-        {['Private by design', 'Encrypted access', 'SOC-ready'].map((label) => (
-          <span key={label} className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-            {label}
-          </span>
-        ))}
+      <div className="mt-8 border-t border-border/70 pt-5">
+        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+          © 2026 BLVCK CYBER
+        </span>
       </div>
     </AuthShell>
   )
