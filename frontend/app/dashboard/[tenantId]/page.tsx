@@ -25,56 +25,14 @@ export default async function DashboardPage({
     <main className="soc-reference-dashboard">
       <header className="soc-reference-header">
         <div>
-          <p className="soc-eyebrow">BLVCK CYBER</p>
-
-          <h1>Security operations — Mining OT</h1>
-
+          <p className="soc-eyebrow">SECURITY OPERATIONS</p>
+          <h1>Security operations</h1>
           <p className="soc-subtitle">
-            Correlated IT/OT posture across corporate systems and mine-site
-            zones.
+            A focused view of the alerts, incidents, detections, and coverage
+            currently available for this environment.
           </p>
         </div>
-
-        <div className="soc-reporting" aria-label="System reporting status">
-          <span aria-hidden="true" />
-          All edge nodes reporting
-        </div>
       </header>
-
-      <nav className="soc-sitebar" aria-label="Site filters">
-        <span className="soc-sitebar-label">Site:</span>
-
-        <button type="button" className="is-selected" aria-pressed="true">
-          All sites (4)
-        </button>
-
-        <button type="button" aria-pressed="false">
-          Mine-07 Kalgoorlie
-        </button>
-
-        <button type="button" aria-pressed="false">
-          Mine-12 Pilbara
-        </button>
-
-        <button type="button" aria-pressed="false">
-          Mine-03 Sudbury
-        </button>
-
-        <div className="soc-legend" aria-label="Network zones">
-          <span className="it" aria-hidden="true" />
-          IT
-          <span className="dmz" aria-hidden="true" />
-          DMZ
-          <span className="scada" aria-hidden="true" />
-          SCADA
-          <span className="control" aria-hidden="true" />
-          Control
-          <span className="safety" aria-hidden="true" />
-          Safety
-          <span className="autonomous" aria-hidden="true" />
-          Autonomous
-        </div>
-      </nav>
 
       {/* Four cards:
           Open alerts

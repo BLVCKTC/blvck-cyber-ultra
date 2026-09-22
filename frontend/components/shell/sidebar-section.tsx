@@ -41,7 +41,7 @@ export function SidebarSection({
   }, [hasActiveItem])
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="space-y-0.5">
+    <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-0.5">
       <CollapsibleTrigger
         className={cn(
           `
