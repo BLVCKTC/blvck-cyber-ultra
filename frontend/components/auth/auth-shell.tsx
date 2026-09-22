@@ -44,8 +44,19 @@ export function AuthShell({
 
   return (
     <main className="relative isolate flex min-h-screen w-full overflow-hidden bg-background text-foreground">
-      <div aria-hidden className="absolute inset-0 -z-20 bg-background" />
-      <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_82%_18%,hsl(var(--primary)/.12),transparent_34%),radial-gradient(circle_at_12%_88%,hsl(var(--sidebar-primary)/.08),transparent_32%)]" />
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-20 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1696886816239-2VFwEjWK9MEpCIfklLjJ4AtEyy2pgD.jpg')",
+        }}
+      />
+      <div aria-hidden className="absolute inset-0 -z-10 bg-sidebar/90" />
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,hsl(var(--sidebar)/.98)_0%,hsl(var(--sidebar)/.84)_45%,hsl(var(--sidebar)/.42)_100%)]"
+      />
 
       <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-5 py-8 sm:px-8 lg:px-12">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-border/70 bg-card/80 shadow-2xl shadow-background/60 backdrop-blur-xl lg:grid-cols-[0.78fr_1.22fr]">
