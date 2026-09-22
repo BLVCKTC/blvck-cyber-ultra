@@ -143,56 +143,48 @@
 
 @layer components {
   .soc-reference-dashboard {
-    --soc-paper: #f7f6f2;
-    --soc-panel: #ffffff;
-    --soc-ink: #111827;
-    --soc-muted: #6b7280;
-    --soc-line: #e5e7eb;
-    --soc-blue: #2f80c9;
-    --soc-red: #d94b4b;
-
     width: 100%;
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 28px 32px 42px;
-    color: var(--soc-ink);
-    background: var(--soc-paper);
-    border-radius: 12px;
+    padding: 28px clamp(16px, 3vw, 40px) 48px;
+    color: var(--foreground);
   }
 
   .soc-reference-header,
-  .soc-sitebar,
   .soc-reference-dashboard .soc-summary-grid,
   .soc-work-grid {
     display: flex;
-    gap: 14px;
+    gap: 16px;
   }
 
   .soc-reference-header {
     align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
   }
 
   .soc-eyebrow {
-    margin: 0 0 2px;
-    color: #7b8490;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    margin: 0 0 6px;
+    color: var(--muted-foreground);
+    font-family: var(--font-mono), monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
   }
 
   .soc-reference-header h1 {
     margin: 0;
-    color: var(--soc-ink);
-    font-size: clamp(20px, 3vw, 28px);
-    line-height: 1.1;
-    letter-spacing: -0.03em;
+    color: var(--foreground);
+    font-size: clamp(24px, 3vw, 34px);
+    font-weight: 650;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
   }
 
   .soc-subtitle {
-    margin: 4px 0 0;
-    color: var(--soc-muted);
+    max-width: 620px;
+    margin: 8px 0 0;
+    color: var(--muted-foreground);
     font-size: 13px;
   }
 
@@ -200,20 +192,23 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    border: 1px solid #c9ddb9;
-    border-radius: 7px;
-    background: #eef7e9;
-    padding: 6px 11px;
-    color: #5a7d32;
-    font-size: 12px;
+    border: 1px solid color-mix(in oklch, var(--primary) 25%, var(--border));
+    border-radius: 6px;
+    background: color-mix(in oklch, var(--primary) 8%, var(--card));
+    padding: 7px 10px;
+    color: var(--primary);
+    font-family: var(--font-mono), monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     white-space: nowrap;
   }
 
   .soc-reporting span {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 999px;
-    background: #5c8d28;
+    background: var(--primary);
   }
 
   .soc-sitebar {
