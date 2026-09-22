@@ -76,6 +76,9 @@ export function Topbar({
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />
+          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-critical text-[9px] font-bold text-white">
+            5
+          </span>
         </button>
 
         {/* User */}
