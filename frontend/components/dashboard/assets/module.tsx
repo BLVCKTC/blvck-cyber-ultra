@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import useSWR from "swr"
 import { Cloud, Laptop, Network, Search, Server, ShieldCheck } from "lucide-react"
 import { getAssets, assetsKey, type ApiAsset } from "@/lib/api/intelligence"
+import { useTenant } from "@/components/providers/tenant-provider"
 import { PageHeader, Panel, Score, StatCard, StatusBadge } from "@/components/dashboard/shared/ui"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,7 +47,11 @@ export function AssetsModule() {
   const [q, setQ] = useState("")
   const [type, setType] = useState("All")
   const [selected, setSelected] = useState<AssetRow | null>(null)
-  const { data, error, isLoading } = useSWR(assetsKey, getAssets)
+  const { tenantId } = useTenant()
+  const { data, error, isLoading } = useSWR(
+    [assetsKey, tenantId],
+    () => getAssets(tenantId),
+  )
   const assets = useMemo(() => (data ?? []).map(mapAsset), [data])
   const shown = useMemo(
     () => assets.filter((a) => (type === "All" || a.type === type) && `${a.name} ${a.owner} ${a.os} ${a.ip}`.toLowerCase().includes(q.toLowerCase())),

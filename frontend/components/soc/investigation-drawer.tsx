@@ -31,7 +31,7 @@ export function InvestigationDrawer({
     setCreating(true)
     setError(null)
     try {
-      await createInvestigation({
+      await createInvestigation(tenantId, {
         tenant_id: tenantId,
         title: `Investigation: ${title}`,
         summary: 'Investigation opened from the SOC workspace.',

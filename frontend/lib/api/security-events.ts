@@ -1,9 +1,9 @@
 import { authenticatedFetch } from './client'
 
-function tenantSecurityEventsEndpoint(tenantId?: string): string {
-  const resolvedTenantId = tenantId ?? (typeof window !== 'undefined' ? window.location.pathname.match(/\/dashboard\/([^/]+)/)?.[1] : undefined)
-  if (!resolvedTenantId) throw new Error('A tenant context is required for security events.')
-  return `/api/v1/tenants/${encodeURIComponent(resolvedTenantId)}/security-events`
+function tenantSecurityEventsEndpoint(tenantId: string): string {
+  const normalizedTenantId = tenantId.trim()
+  if (!normalizedTenantId) throw new Error('A tenant context is required for security events.')
+  return `/api/v1/tenants/${encodeURIComponent(normalizedTenantId)}/security-events`
 }
 
 export type SecurityEventSeverity =
@@ -254,7 +254,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 async function apiFetch(
-  tenantId: string | undefined,
+  tenantId: string,
   endpoint = '',
   options: RequestInit = {},
 ): Promise<Response> {

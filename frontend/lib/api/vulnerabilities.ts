@@ -1,4 +1,4 @@
-import { API_URL, authenticatedFetch } from './client'
+import { authenticatedFetch, tenantApiPath } from './client'
 
 export interface ApiVulnerability {
   id: string
@@ -12,8 +12,8 @@ export interface ApiVulnerability {
   created_at: string
 }
 
-export async function getVulnerabilities(): Promise<ApiVulnerability[]> {
-  const response = await authenticatedFetch(`${API_URL}/intelligence/vulnerabilities`, {
+export async function getVulnerabilities(tenantId: string): Promise<ApiVulnerability[]> {
+  const response = await authenticatedFetch(tenantApiPath(tenantId, 'intelligence/vulnerabilities'), {
     headers: { Accept: 'application/json' },
   })
   if (!response.ok) throw new Error('Unable to load vulnerabilities')
