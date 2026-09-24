@@ -117,7 +117,7 @@ export function AlertInvestigationModule({
     setIsUpdating(true)
 
     try {
-      const updated = await updateAlert(alert.id, { status })
+      const updated = await updateAlert(tenantId, alert.id, { status })
 
       setAlert(updated)
 

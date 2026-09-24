@@ -3,12 +3,13 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, UniqueConstraint
 from app.db.base import Base
 
 class Investigation(Base):
     __tablename__ = 'investigations'
-    __table_args__ = (Index('ix_investigations_tenant_status', 'tenant_id', 'status'), Index('ix_investigations_tenant_updated', 'tenant_id', 'updated_at'))
+    __table_args__ = (Index('ix_investigations_tenant_status', 'tenant_id', 'status'), Index('ix_investigations_tenant_updated', 'tenant_id', 'updated_at'),
+                    UniqueConstraint('tenant_id', 'alert_id', name='uq_investigations_tenant_alert'),  )
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey('tenants.id', ondelete='CASCADE'), nullable=False, index=True)
     alert_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey('alerts.id', ondelete='SET NULL'))

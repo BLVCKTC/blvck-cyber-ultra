@@ -38,7 +38,7 @@ export interface AlertList {
   offset: number
 }
 
-const path = () => tenantApiPath('alerts')
+const path = (tenantId: string) => tenantApiPath(tenantId, 'alerts')
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await authenticatedFetch(url, {
@@ -59,6 +59,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function getAlerts(
+  tenantId: string,
   params: Record<string, string | number | boolean | undefined> = {},
 ) {
   const query = new URLSearchParams(
@@ -69,14 +70,17 @@ export function getAlerts(
 
   const queryString = query.toString()
 
-  return request<AlertList>(queryString ? `${path()}?${queryString}` : path())
+  return request<AlertList>(
+    queryString ? `${path(tenantId)}?${queryString}` : path(tenantId),
+  )
 }
 
-export function getAlert(id: string) {
-  return request<Alert>(`${path()}/${encodeURIComponent(id)}`)
+export function getAlert(tenantId: string, id: string) {
+  return request<Alert>(`${path(tenantId)}/${encodeURIComponent(id)}`)
 }
 
 export function createAlert(
+  tenantId: string,
   payload: Omit<
     Alert,
     | 'id'
@@ -87,13 +91,14 @@ export function createAlert(
     | 'updated_at'
   >,
 ) {
-  return request<Alert>(path(), {
+  return request<Alert>(path(tenantId), {
     method: 'POST',
     body: JSON.stringify(payload),
   })
 }
 
 export function updateAlert(
+  tenantId: string,
   id: string,
   payload: Partial<
     Pick<
@@ -108,14 +113,14 @@ export function updateAlert(
     >
   >,
 ) {
-  return request<Alert>(`${path()}/${encodeURIComponent(id)}`, {
+  return request<Alert>(`${path(tenantId)}/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
 }
 
-export function deleteAlert(id: string) {
-  return request<void>(`${path()}/${encodeURIComponent(id)}`, {
+export function deleteAlert(tenantId: string, id: string) {
+  return request<void>(`${path(tenantId)}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   })
 }

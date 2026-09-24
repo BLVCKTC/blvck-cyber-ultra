@@ -15,8 +15,12 @@ export interface Incident {
   updated_at: string
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await authenticatedFetch(tenantApiPath(path), {
+async function request<T>(
+  tenantId: string,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await authenticatedFetch(tenantApiPath(tenantId, path), {
     ...init,
     headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
   })
@@ -27,16 +31,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json()
 }
 
-export function getIncidents() {
-  return request<Incident[]>('/incidents')
+export function getIncidents(tenantId: string) {
+  return request<Incident[]>(tenantId, '/incidents')
 }
 
-export function getIncident(id: string) {
-  return request<Incident>(`/incidents/${encodeURIComponent(id)}`)
+export function getIncident(tenantId: string, id: string) {
+  return request<Incident>(tenantId, `/incidents/${encodeURIComponent(id)}`)
 }
 
-export function createIncident(input: Pick<Incident, 'title' | 'severity' | 'summary'>) {
-  return request<Incident>('/incidents', {
+export function createIncident(
+  tenantId: string,
+  input: Pick<Incident, 'title' | 'severity' | 'summary'>,
+) {
+  return request<Incident>(tenantId, '/incidents', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),

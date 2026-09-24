@@ -1,3 +1,5 @@
+# app/ingestion/pipeline.py
+
 from __future__ import annotations
 
 import logging
@@ -13,21 +15,28 @@ from app.db.repositories.alert_repo import AlertRepository
 from app.db.repositories.canary_match_repo import CanaryMatchRepository
 from app.db.repositories.detection_match_repo import DetectionMatchRepository
 from app.db.repositories.detection_rule_repo import DetectionRuleRepository
-from app.db.repositories.quarantined_event_repo import QuarantinedEventRepository
+from app.db.repositories.quarantined_event_repo import (
+    QuarantinedEventRepository,
+)
 from app.ingestion.models import IngestionResult, SecurityEventEnvelope
 from app.ingestion.normalizer import SecurityEventNormalizer
 from app.ingestion.validators import SecurityEventValidator
 from app.schemas.alert import AlertCreate
 from app.schemas.security_event import SecurityEventCreate
+from app.services.audit_service import record_audit_event
 from app.services.detection_rules.matching import (
     build_fingerprint,
     evaluate_rule_for_event,
 )
 from app.services.security_event_service import SecurityEventService
 
+
 logger = logging.getLogger(__name__)
 
-_ALERT_TERMINAL_STATUSES = {"resolved", "false_positive"}
+_ALERT_TERMINAL_STATUSES = {
+    "resolved",
+    "false_positive",
+}
 _ALERT_REOPEN_STATUS = "open"
 
 
@@ -57,11 +66,13 @@ class SecurityEventIngestionPipeline:
             normalized_payload = self._model_to_mapping(normalized)
 
             stage = "validation"
+
             validated_payload = SecurityEventValidator(
                 authenticated_tenant_id=tenant_id,
             ).validate(normalized_payload)
 
             stage = "persistence"
+
             event_payload = SecurityEventCreate.model_validate(
                 validated_payload,
             )
@@ -144,7 +155,10 @@ class SecurityEventIngestionPipeline:
         self,
         envelopes: list[SecurityEventEnvelope],
     ) -> list[IngestionResult]:
-        return [self.ingest(envelope) for envelope in envelopes]
+        return [
+            self.ingest(envelope)
+            for envelope in envelopes
+        ]
 
     def _quarantine(
         self,
@@ -264,8 +278,11 @@ class SecurityEventIngestionPipeline:
 
         return source_event_id or None
 
-    def _evaluate_detection_rules(self, event: Any) -> None:
-        """Run CANARY and PRODUCTION rules against a newly persisted event."""
+    def _evaluate_detection_rules(
+        self,
+        event: Any,
+    ) -> None:
+        """Run CANARY and PRODUCTION rules against a persisted event."""
         tenant_id = event.tenant_id
 
         try:
@@ -276,7 +293,8 @@ class SecurityEventIngestionPipeline:
             )
         except Exception:
             logger.exception(
-                "Failed to list canary rules for tenant %s (event %s)",
+                "Failed to list canary rules for tenant %s "
+                "(event %s)",
                 tenant_id,
                 event.id,
             )
@@ -284,10 +302,14 @@ class SecurityEventIngestionPipeline:
 
         for rule in canary_rules:
             try:
-                self._evaluate_canary_rule(rule, event)
+                self._evaluate_canary_rule(
+                    rule,
+                    event,
+                )
             except Exception:
                 logger.exception(
-                    "Canary rule %s evaluation failed for event %s (tenant %s)",
+                    "Canary rule %s evaluation failed for event %s "
+                    "(tenant %s)",
                     rule.id,
                     event.id,
                     tenant_id,
@@ -299,7 +321,8 @@ class SecurityEventIngestionPipeline:
             )
         except Exception:
             logger.exception(
-                "Failed to list production rules for tenant %s (event %s)",
+                "Failed to list production rules for tenant %s "
+                "(event %s)",
                 tenant_id,
                 event.id,
             )
@@ -307,10 +330,14 @@ class SecurityEventIngestionPipeline:
 
         for rule in production_rules:
             try:
-                self._evaluate_production_rule(rule, event)
+                self._evaluate_production_rule(
+                    rule,
+                    event,
+                )
             except Exception:
                 logger.exception(
-                    "Production rule %s evaluation failed for event %s (tenant %s)",
+                    "Production rule %s evaluation failed for event %s "
+                    "(tenant %s)",
                     rule.id,
                     event.id,
                     tenant_id,
@@ -366,11 +393,15 @@ class SecurityEventIngestionPipeline:
                         "group_key": candidate.group_key,
                         "metric_value": candidate.metric_value,
                         "event_ids": [
-                            str(e)
-                            for e in candidate.event_ids
+                            str(event_id)
+                            for event_id in candidate.event_ids
                         ],
-                        "window_start": candidate.window_start.isoformat(),
-                        "window_end": candidate.window_end.isoformat(),
+                        "window_start": (
+                            candidate.window_start.isoformat()
+                        ),
+                        "window_end": (
+                            candidate.window_end.isoformat()
+                        ),
                     },
                 },
             )
@@ -439,17 +470,29 @@ class SecurityEventIngestionPipeline:
         event: Any,
     ) -> None:
         metadata = dict(existing.metadata_json or {})
-        match_ids = metadata.get("detection_match_ids", [])
+
+        match_ids = metadata.get(
+            "detection_match_ids",
+            [],
+        )
         match_ids.append(str(match.id))
+
         metadata["detection_match_ids"] = match_ids[-50:]
-        metadata["match_count"] = metadata.get("match_count", 0) + 1
+        metadata["match_count"] = (
+            metadata.get("match_count", 0) + 1
+        )
 
         update_data: dict[str, Any] = {
             "last_seen_at": event.event_time,
             "metadata_json": metadata,
         }
 
-        if existing.status in _ALERT_TERMINAL_STATUSES:
+        # Only reopen and audit an actual state change. Routine match
+        # updates on an already-open alert do not create audit noise.
+        was_reopened = existing.status in _ALERT_TERMINAL_STATUSES
+        previous_status = existing.status
+
+        if was_reopened:
             update_data["status"] = _ALERT_REOPEN_STATUS
 
         self.alerts.update(
@@ -457,6 +500,25 @@ class SecurityEventIngestionPipeline:
             alert_id=existing.id,
             data=update_data,
         )
+
+        if was_reopened:
+            # alerts.update() commits internally in this codebase.
+            # record_audit_event() does not commit, so commit the audit
+            # record explicitly in its own transaction.
+            record_audit_event(
+                self.db,
+                tenant_id=existing.tenant_id,
+                actor_user_id=None,
+                action="alert.reopened",
+                entity_type="alert",
+                entity_id=existing.id,
+                payload={
+                    "previous_status": previous_status,
+                    "new_status": _ALERT_REOPEN_STATUS,
+                    "triggering_detection_match_id": str(match.id),
+                },
+            )
+            self.db.commit()
 
 
 def ingest_security_event(

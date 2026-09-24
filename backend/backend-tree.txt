@@ -1,0 +1,492 @@
+Folder PATH listing for volume Windows
+Volume serial number is 4402-6942
+C:.
+|   .env
+|   alembic.ini
+|   backend-tree.txt
+|   blvckcyber_before_uuid.sql
+|   Dockerfile
+|   favicon.ico
+|   inspect_fks.py
+|   inspect_schema.py
+|   pyproject.toml
+|   README.md
+|   test_rls_context.py
+|   
++---.pytest_cache
+|   |   .gitignore
+|   |   CACHEDIR.TAG
+|   |   README.md
+|   |   
+|   \---v
+|       \---cache
+|               lastfailed
+|               nodeids
+|               
++---alembic
+|   |   env.py
+|   |   script.py.mako
+|   |   
+|   +---versions
+|   |   |   05cd575b1582_merge_detection_and_security_event_.py
+|   |   |   0e631fc99f76_drop_legacy_membership_policy.py
+|   |   |   1540f7fc462a_merge_foundation_and_operations_.py
+|   |   |   1f5066cc44a3_add_forked_from_id_for_rule_versioning_.py
+|   |   |   2021bf035a52_add_detection_rule_technique_foreign_.py
+|   |   |   25a51b968a05_create_auth_tables.py
+|   |   |   32ce2e6cde24_add_role_permissions2.py
+|   |   |   3fb7987880ea_upgrade_security_events_model.py
+|   |   |   44c393f34ff4_add_unique_constraint_on_investigations_.py
+|   |   |   47dc2cb41846_add_updated_at_to_tenants.py
+|   |   |   4ebd48c80180_update_membership_rbac_relation.py
+|   |   |   4fb0c4c00dbc_add_rule_governance_fields.py
+|   |   |   510abc096744_fix_tenant_roles_and_tenant_role_.py
+|   |   |   515d231d0dc5_add_security_events.py
+|   |   |   54808cd1f83d_migrate_identity_and_tenant_rbac_to_.py
+|   |   |   5ae7fee936eb_change_security_event_ports_to_integer.py
+|   |   |   612a92fd2869_create_teams_and_team_members_with_rls.py
+|   |   |   61338bb0b6d7_fix_nullif_guard_and_close_rls_gap_on_.py
+|   |   |   64ef4287edd5_add_quarantined_events.py
+|   |   |   651a14c9928f_add_rbac_tables.py
+|   |   |   740583192cd2_add_pkce_attempts.py
+|   |   |   7937e89cd9f4_enable_row_level_security.py
+|   |   |   7945f6a02600_fix_pkce_attempt_uuid_type.py
+|   |   |   7a2c4d6e8f10_add_status_to_security_events.py
+|   |   |   7a91d4c8e2f3_add_canary_started_at_to_detection_rules.py
+|   |   |   7bfcf2cd9890_remove_duplicate_detection_rule_.py
+|   |   |   7c6f6d09dd73_restore_detection_rule_technique_.py
+|   |   |   92c0ffb712de_fix_tenant_created_at_default.py
+|   |   |   9bb93c8c7c1e_create_mitre_reference_tables_and_.py
+|   |   |   9c1d2e4f7a8b_add_detection_rules.py
+|   |   |   9f5d3ec2043c_drop_rule_versions_table_repoint_.py
+|   |   |   a4e8d37b3af4_create_backtest_runs_and_backtest_.py
+|   |   |   a63b125c952d_add_missing_tenant_rbac_constraints.py
+|   |   |   a767a6ea261c_upgrade_membership_model.py
+|   |   |   a85d225253a7_add_mitre_referrence_tables.py
+|   |   |   b04c5da2d9e9_add_slug_and_timestamps_to_tenants.py
+|   |   |   b7e2f4a91c03_add_alerts.py
+|   |   |   c4f8a1d2e9b0_allow_tenantless_pkce.py
+|   |   |   c8f3a5b19d27_add_investigations_evidence.py
+|   |   |   d1f4a8b7c902_add_foundation_entities.py
+|   |   |   d4049eab274c_drop_duplicate_foreign_key_constraints_.py
+|   |   |   e2b6c9d8a103_add_incident_operation_entities.py
+|   |   |   e512b58badb6_add_tenant_organization_profile_fields.py
+|   |   |   f0a04bc38671_add_tenant_fingerprint_uniqueness.py
+|   |   |   f3a7d1c8b204_add_intelligence_asset_entities.py
+|   |   |   f4a7b8c9d012_finish_operations_integrity.py
+|   |   |   f678243ad1e5_add_role_permissions.py
+|   |   |   fa362d05c536_allow_nullable_mitre_ids_for_stix_.py
+|   |   |   fc95643ed61c_create_canary_matches_table.py
+|   |   |   
+|   |   \---__pycache__
+|   |           05cd575b1582_merge_detection_and_security_event_.cpython-314.pyc
+|   |           0e631fc99f76_drop_legacy_membership_policy.cpython-314.pyc
+|   |           1540f7fc462a_merge_foundation_and_operations_.cpython-314.pyc
+|   |           1f5066cc44a3_add_forked_from_id_for_rule_versioning_.cpython-314.pyc
+|   |           2021bf035a52_add_detection_rule_technique_foreign_.cpython-314.pyc
+|   |           25a51b968a05_create_auth_tables.cpython-314.pyc
+|   |           30304af043d5_updating_security_event_model.cpython-314.pyc
+|   |           32ce2e6cde24_add_role_permissions2.cpython-314.pyc
+|   |           3c928f31479b_add_missing_foreign_keys_to_detection_.cpython-314.pyc
+|   |           3fb7987880ea_upgrade_security_events_model.cpython-314.pyc
+|   |           44c393f34ff4_add_unique_constraint_on_investigations_.cpython-314.pyc
+|   |           47dc2cb41846_add_updated_at_to_tenants.cpython-314.pyc
+|   |           4ebd48c80180_update_membership_rbac_relation.cpython-314.pyc
+|   |           4fb0c4c00dbc_add_rule_governance_fields.cpython-314.pyc
+|   |           510abc096744_fix_tenant_roles_and_tenant_role_.cpython-314.pyc
+|   |           515d231d0dc5_add_security_events.cpython-314.pyc
+|   |           546f6bb0bd50_add_status_check_constraint_to_.cpython-314.pyc
+|   |           54808cd1f83d_migrate_identity_and_tenant_rbac_to_.cpython-314.pyc
+|   |           5ae7fee936eb_change_security_event_ports_to_integer.cpython-314.pyc
+|   |           612a92fd2869_create_teams_and_team_members_with_rls.cpython-314.pyc
+|   |           61338bb0b6d7_fix_nullif_guard_and_close_rls_gap_on_.cpython-314.pyc
+|   |           64ef4287edd5_add_quarantined_events.cpython-314.pyc
+|   |           651a14c9928f_add_rbac_tables.cpython-314.pyc
+|   |           740583192cd2_add_pkce_attempts.cpython-314.pyc
+|   |           7937e89cd9f4_enable_row_level_security.cpython-314.pyc
+|   |           7945f6a02600_fix_pkce_attempt_uuid_type.cpython-314.pyc
+|   |           7a2c4d6e8f10_add_status_to_security_events.cpython-314.pyc
+|   |           7a91d4c8e2f3_add_canary_started_at_to_detection_rules.cpython-314.pyc
+|   |           7bfcf2cd9890_remove_duplicate_detection_rule_.cpython-314.pyc
+|   |           7c6f6d09dd73_restore_detection_rule_technique_.cpython-314.pyc
+|   |           7f09b7934605_upgrade_security_events_model.cpython-314.pyc
+|   |           92c0ffb712de_fix_tenant_created_at_default.cpython-314.pyc
+|   |           9bb93c8c7c1e_create_mitre_reference_tables_and_.cpython-314.pyc
+|   |           9c1d2e4f7a8b_add_detection_rules.cpython-314.pyc
+|   |           9f5d3ec2043c_drop_rule_versions_table_repoint_.cpython-314.pyc
+|   |           a4e8d37b3af4_create_backtest_runs_and_backtest_.cpython-314.pyc
+|   |           a63b125c952d_add_missing_tenant_rbac_constraints.cpython-314.pyc
+|   |           a767a6ea261c_upgrade_membership_model.cpython-314.pyc
+|   |           a85d225253a7_add_mitre_referrence_tables.cpython-314.pyc
+|   |           b04c5da2d9e9_add_slug_and_timestamps_to_tenants.cpython-314.pyc
+|   |           b7e2f4a91c03_add_alerts.cpython-314.pyc
+|   |           c4f8a1d2e9b0_allow_tenantless_pkce.cpython-314.pyc
+|   |           c8f3a5b19d27_add_investigations_evidence.cpython-314.pyc
+|   |           d1f4a8b7c902_add_foundation_entities.cpython-314.pyc
+|   |           d4049eab274c_drop_duplicate_foreign_key_constraints_.cpython-314.pyc
+|   |           e2b6c9d8a103_add_incident_operation_entities.cpython-314.pyc
+|   |           e512b58badb6_add_tenant_organization_profile_fields.cpython-314.pyc
+|   |           f0a04bc38671_add_tenant_fingerprint_uniqueness.cpython-314.pyc
+|   |           f3a7d1c8b204_add_intelligence_asset_entities.cpython-314.pyc
+|   |           f4a7b8c9d012_finish_operations_integrity.cpython-314.pyc
+|   |           f678243ad1e5_add_role_permissions.cpython-314.pyc
+|   |           fa362d05c536_allow_nullable_mitre_ids_for_stix_.cpython-314.pyc
+|   |           fc95643ed61c_create_canary_matches_table.cpython-314.pyc
+|   |           
+|   \---__pycache__
+|           env.cpython-314.pyc
+|           
++---app
+|   |   main.py
+|   |   
+|   +---agents
+|   |   |   agent_nodes.py
+|   |   |   orchestrator.py
+|   |   |   state.py
+|   |   |   
+|   |   \---__pycache__
+|   |           agent_nodes.cpython-314.pyc
+|   |           orchestrator.cpython-314.pyc
+|   |           state.cpython-314.pyc
+|   |           
+|   +---api
+|   |   |   deps.py
+|   |   |   
+|   |   +---dependencies
+|   |   |   |   rbac.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           rbac.cpython-314.pyc
+|   |   |           
+|   |   +---routes
+|   |   |   |   alerts_api.py
+|   |   |   |   api_keys.py
+|   |   |   |   audit.py
+|   |   |   |   auth.py
+|   |   |   |   dashboard.py
+|   |   |   |   detection_rules.py
+|   |   |   |   events.py
+|   |   |   |   health.py
+|   |   |   |   incidents.py
+|   |   |   |   intelligence.py
+|   |   |   |   investigations.py
+|   |   |   |   memberships.py
+|   |   |   |   mitre.py
+|   |   |   |   operations.py
+|   |   |   |   quarantine.py
+|   |   |   |   security_events.py
+|   |   |   |   security_settings.py
+|   |   |   |   teams.py
+|   |   |   |   tenants.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           alerts_api.cpython-314.pyc
+|   |   |           api_keys.cpython-314.pyc
+|   |   |           audit.cpython-314.pyc
+|   |   |           auth.cpython-314.pyc
+|   |   |           dashboard.cpython-314.pyc
+|   |   |           detection_rules.cpython-314.pyc
+|   |   |           events.cpython-314.pyc
+|   |   |           health.cpython-314.pyc
+|   |   |           incidents.cpython-314.pyc
+|   |   |           intelligence.cpython-314.pyc
+|   |   |           investigations.cpython-314.pyc
+|   |   |           memberships.cpython-314.pyc
+|   |   |           mitre.cpython-314.pyc
+|   |   |           operations.cpython-314.pyc
+|   |   |           quarantine.cpython-314.pyc
+|   |   |           security_events.cpython-314.pyc
+|   |   |           security_settings.cpython-314.pyc
+|   |   |           teams.cpython-314.pyc
+|   |   |           tenants.cpython-314.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           deps.cpython-314.pyc
+|   |           
+|   +---core
+|   |   |   config.py
+|   |   |   cookies.py
+|   |   |   db.py
+|   |   |   keycloak.py
+|   |   |   permissions.py
+|   |   |   
+|   |   +---security
+|   |   |   |   api_key_hash.py
+|   |   |   |   jwks.py
+|   |   |   |   jwt_verify.py
+|   |   |   |   keycloak_auth.py
+|   |   |   |   permissions.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           api_key_hash.cpython-314.pyc
+|   |   |           jwks.cpython-314.pyc
+|   |   |           jwt_verify.cpython-314.pyc
+|   |   |           keycloak_auth.cpython-314.pyc
+|   |   |           permissions.cpython-314.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           config.cpython-314.pyc
+|   |           cookies.cpython-314.pyc
+|   |           db.cpython-314.pyc
+|   |           keycloak.cpython-314.pyc
+|   |           permissions.cpython-314.pyc
+|   |           
+|   +---db
+|   |   |   base.py
+|   |   |   __init__.py
+|   |   |   
+|   |   +---models
+|   |   |   |   alert.py
+|   |   |   |   api_key.py
+|   |   |   |   audit_log_entry.py
+|   |   |   |   backtest.py
+|   |   |   |   canary.py
+|   |   |   |   detection_rule.py
+|   |   |   |   domain.py
+|   |   |   |   enums.py
+|   |   |   |   intelligence.py
+|   |   |   |   investigation.py
+|   |   |   |   membership.py
+|   |   |   |   mitre.py
+|   |   |   |   operations.py
+|   |   |   |   organization_profile.py
+|   |   |   |   permission.py
+|   |   |   |   pkce_attempt.py
+|   |   |   |   plan.py
+|   |   |   |   quarantined_event.py
+|   |   |   |   role_permission.py
+|   |   |   |   security_event.py
+|   |   |   |   security_setting.py
+|   |   |   |   subscription.py
+|   |   |   |   team.py
+|   |   |   |   team_member.py
+|   |   |   |   tenant.py
+|   |   |   |   tenant_role.py
+|   |   |   |   tenant_role_permission.py
+|   |   |   |   user.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           alert.cpython-314.pyc
+|   |   |           api_key.cpython-314.pyc
+|   |   |           audit_log_entry.cpython-314.pyc
+|   |   |           backtest.cpython-314.pyc
+|   |   |           canary.cpython-314.pyc
+|   |   |           canary_model.cpython-314.pyc
+|   |   |           detection_rule.cpython-314.pyc
+|   |   |           domain.cpython-314.pyc
+|   |   |           enums.cpython-314.pyc
+|   |   |           foundation.cpython-314.pyc
+|   |   |           intelligence.cpython-314.pyc
+|   |   |           investigation.cpython-314.pyc
+|   |   |           membership.cpython-314.pyc
+|   |   |           mitre.cpython-314.pyc
+|   |   |           operations.cpython-314.pyc
+|   |   |           organization_profile.cpython-314.pyc
+|   |   |           permission.cpython-314.pyc
+|   |   |           pkce_attempt.cpython-314.pyc
+|   |   |           plan.cpython-314.pyc
+|   |   |           quarantined_event.cpython-314.pyc
+|   |   |           role_permission.cpython-314.pyc
+|   |   |           security_event.cpython-314.pyc
+|   |   |           security_setting.cpython-314.pyc
+|   |   |           subscription.cpython-314.pyc
+|   |   |           team.cpython-314.pyc
+|   |   |           team_member.cpython-314.pyc
+|   |   |           tenant.cpython-314.pyc
+|   |   |           tenant_role.cpython-314.pyc
+|   |   |           tenant_role_permission.cpython-314.pyc
+|   |   |           user.cpython-314.pyc
+|   |   |           __init__.cpython-314.pyc
+|   |   |           
+|   |   +---repositories
+|   |   |   |   alert_repo.py
+|   |   |   |   api_key_repo.py
+|   |   |   |   canary_match_repo.py
+|   |   |   |   dashboard_repo.py
+|   |   |   |   detection_match_repo.py
+|   |   |   |   detection_rule_repo.py
+|   |   |   |   membership_repo.py
+|   |   |   |   mitre_repo.py
+|   |   |   |   quarantined_event_repo.py
+|   |   |   |   security_event_repo.py
+|   |   |   |   security_setting_repo.py
+|   |   |   |   team_repo.py
+|   |   |   |   tenant_repo.py
+|   |   |   |   user_repo.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           alert_repo.cpython-314.pyc
+|   |   |           api_key_repo.cpython-314.pyc
+|   |   |           canary_match_repo.cpython-314.pyc
+|   |   |           dashboard_repo.cpython-314.pyc
+|   |   |           detection_match_repo.cpython-314.pyc
+|   |   |           detection_rule_repo.cpython-314.pyc
+|   |   |           membership_repo.cpython-314.pyc
+|   |   |           mitre_repo.cpython-314.pyc
+|   |   |           quarantined_event_repo.cpython-314.pyc
+|   |   |           security_event_repo.cpython-314.pyc
+|   |   |           security_setting_repo.cpython-314.pyc
+|   |   |           team_repo.cpython-314.pyc
+|   |   |           tenant_repo.cpython-314.pyc
+|   |   |           user_repo.cpython-314.pyc
+|   |   |           
+|   |   +---seeds
+|   |   |   |   permissions.py
+|   |   |   |   role_permissions.py
+|   |   |   |   seed.py
+|   |   |   |   tenant_roles.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           permissions.cpython-314.pyc
+|   |   |           role_permissions.cpython-314.pyc
+|   |   |           seed.cpython-314.pyc
+|   |   |           tenant_roles.cpython-314.pyc
+|   |   |           __init__.cpython-314.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           base.cpython-314.pyc
+|   |           __init__.cpython-314.pyc
+|   |           
+|   +---ingestion
+|   |   |   fingerprint.py
+|   |   |   models.py
+|   |   |   normalizer.py
+|   |   |   pipeline.py
+|   |   |   validators.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           fingerprint.cpython-314.pyc
+|   |           models.cpython-314.pyc
+|   |           normalizer.cpython-314.pyc
+|   |           pipeline.cpython-314.pyc
+|   |           validators.cpython-314.pyc
+|   |           __init__.cpython-314.pyc
+|   |           
+|   +---schemas
+|   |   |   alert.py
+|   |   |   api_key.py
+|   |   |   auth.py
+|   |   |   backtest.py
+|   |   |   dashboard.py
+|   |   |   detection_rule.py
+|   |   |   investigation.py
+|   |   |   membership.py
+|   |   |   mitre.py
+|   |   |   quarantined_event.py
+|   |   |   security_event.py
+|   |   |   security_setting.py
+|   |   |   team.py
+|   |   |   tenant.py
+|   |   |   
+|   |   \---__pycache__
+|   |           alert.cpython-314.pyc
+|   |           api_key.cpython-314.pyc
+|   |           auth.cpython-314.pyc
+|   |           backtest.cpython-314.pyc
+|   |           dashboard.cpython-314.pyc
+|   |           detection_rule.cpython-314.pyc
+|   |           investigation.cpython-314.pyc
+|   |           membership.cpython-314.pyc
+|   |           mitre.cpython-314.pyc
+|   |           quarantined_event.cpython-314.pyc
+|   |           security_event.cpython-314.pyc
+|   |           security_setting.cpython-314.pyc
+|   |           team.cpython-314.pyc
+|   |           tenant.cpython-314.pyc
+|   |           
+|   +---services
+|   |   |   alert_service.py
+|   |   |   api_key_service.py
+|   |   |   audit_service.py
+|   |   |   auth_service.py
+|   |   |   backtest_service.py
+|   |   |   canary_promotion_service.py
+|   |   |   detection_rule_service.py
+|   |   |   investigation_orchestrator_service.py
+|   |   |   investigation_service.py
+|   |   |   membership_service.py
+|   |   |   mitre_sync_service.py
+|   |   |   pkce_service.py
+|   |   |   rbac.py
+|   |   |   security_event_service.py
+|   |   |   security_setting_service.py
+|   |   |   team_service.py
+|   |   |   tenant_role_provisioning.py
+|   |   |   tenant_service.py
+|   |   |   token_service.py
+|   |   |   
+|   |   +---detection_rules
+|   |   |   |   execution.py
+|   |   |   |   matching.py
+|   |   |   |   validation.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           execution.cpython-314.pyc
+|   |   |           matching.cpython-314.pyc
+|   |   |           validation.cpython-314.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           alert_service.cpython-314.pyc
+|   |           api_key_service.cpython-314.pyc
+|   |           audit_service.cpython-314.pyc
+|   |           auth_service.cpython-314.pyc
+|   |           backtest_service.cpython-314.pyc
+|   |           canary_promotion_service.cpython-314.pyc
+|   |           detection_rule_service.cpython-314.pyc
+|   |           investigation_orchestrator_service.cpython-314.pyc
+|   |           investigation_service.cpython-314.pyc
+|   |           membership_service.cpython-314.pyc
+|   |           mitre_sync_service.cpython-314.pyc
+|   |           pkce_service.cpython-314.pyc
+|   |           rbac.cpython-314.pyc
+|   |           security_event_service.cpython-314.pyc
+|   |           security_setting_service.cpython-314.pyc
+|   |           team_service.cpython-314.pyc
+|   |           tenant_role_provisioning.cpython-314.pyc
+|   |           tenant_service.cpython-314.pyc
+|   |           token_service.cpython-314.pyc
+|   |           
+|   \---__pycache__
+|           main.cpython-314.pyc
+|           
++---backend.egg-info
+|       dependency_links.txt
+|       PKG-INFO
+|       requires.txt
+|       SOURCES.txt
+|       top_level.txt
+|       
++---scripts
+|   |   check_permissions.py
+|   |   seed_database.py
+|   |   seed_database_pg8000.py
+|   |   seed_mining_tenants.py
+|   |   seed_security_events.py
+|   |   sync_mining_keycloak.py
+|   |   sync_mitre_attack.py
+|   |   test_rbac.py
+|   |   
+|   \---__pycache__
+|           seed_database.cpython-314.pyc
+|           
+\---tests
+    |   conftest.py
+    |   test.py
+    |   test_detection_rule_governance.py
+    |   test_detection_rule_http_rbac.py
+    |   test_live_detection_loop.py
+    |   test_rbac_seed_contract.py
+    |   test_security_boundaries.py
+    |   
+    \---__pycache__
+            conftest.cpython-314-pytest-9.1.1.pyc
+            test.cpython-314-pytest-9.1.1.pyc
+            test_detection_rule_governance.cpython-314-pytest-9.1.1.pyc
+            test_detection_rule_http_rbac.cpython-314-pytest-9.1.1.pyc
+            test_live_detection_loop.cpython-314-pytest-9.1.1.pyc
+            test_rbac_seed_contract.cpython-314-pytest-9.1.1.pyc
+            test_security_boundaries.cpython-314-pytest-9.1.1.pyc
+            

@@ -11,10 +11,10 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps) {
-  const { alertId } = await params
+  const { tenantId, alertId } = await params
 
   try {
-    const alert = await getAlert(alertId)
+    const alert = await getAlert(tenantId, alertId)
 
     return {
       title: `${alert.id} — ${alert.title}`,
@@ -32,7 +32,7 @@ export default async function AlertInvestigationPage({ params }: PageProps) {
   let alert
 
   try {
-    alert = await getAlert(alertId)
+    alert = await getAlert(tenantId, alertId)
   } catch {
     notFound()
   }

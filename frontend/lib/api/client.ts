@@ -2,14 +2,16 @@
 
 import { API_URL } from './config'
 
-/** Build canonical tenant-scoped API paths from the active dashboard route. */
-export function tenantApiPath(resource: string): string {
-  if (typeof window === 'undefined') return `${API_URL}/v1/tenants/${resource.replace(/^\//, '')}`
-  const match = window.location.pathname.match(new RegExp('/dashboard/([^/]+)'))
-  const tenantId = match?.[1]
-  return tenantId
-    ? `${API_URL}/v1/tenants/${encodeURIComponent(tenantId)}/${resource.replace(/^\//, '')}`
-    : `${API_URL}/${resource.replace(/^\//, '')}`
+export function tenantApiPath(tenantId: string, resource: string): string {
+  const normalizedTenantId = tenantId.trim()
+
+  if (!normalizedTenantId) {
+    throw new Error(
+      'A tenant context is required for tenant-scoped API requests.',
+    )
+  }
+  const normalizedResource = resource.replace(/^\/+/, '')
+  return `${API_URL}/v1/tenants/${encodeURIComponent(normalizedTenantId)}/${normalizedResource}`
 }
 
 let refreshPromise: Promise<boolean> | null = null
@@ -64,11 +66,13 @@ export async function authenticatedFetch(
   input: RequestInfo | URL,
   init: RequestInit = {},
 ): Promise<Response> {
-  const request = () => fetch(input, { ...init, credentials: 'include', cache: 'no-store' })
+  const request = () =>
+    fetch(input, { ...init, credentials: 'include', cache: 'no-store' })
   const response = await request()
 
   if (response.status !== 401 || logoutRequested) return response
-  if (typeof input === 'string' && input.includes(AUTH_REFRESH_PATH)) return response
+  if (typeof input === 'string' && input.includes(AUTH_REFRESH_PATH))
+    return response
 
   if (await refreshSession()) {
     devLog('Retrying request')
