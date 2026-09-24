@@ -7,7 +7,7 @@ import { getAlerts } from '@/lib/api/alerts'
 
 export function LiveOperations() {
   const { tenantId } = useTenant()
-  const { data, error, isLoading } = useSWR(['command-center-alerts', tenantId], () => getAlerts({ limit: 100, offset: 0 }))
+  const { data, error, isLoading } = useSWR(['command-center-alerts', tenantId], () => getAlerts(tenantId, { limit: 100, offset: 0 }))
   const alerts = data?.items ?? []
   const open = alerts.filter((alert) => !['resolved', 'suppressed', 'false_positive'].includes(alert.status)).length
   const critical = alerts.filter((alert) => alert.severity === 'critical').length

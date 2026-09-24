@@ -11,8 +11,8 @@ export interface ApiAsset {
   created_at: string
 }
 
-async function request<T>(path: string): Promise<T> {
-  const response = await authenticatedFetch(tenantApiPath(path), {
+async function request<T>(tenantId: string, path: string): Promise<T> {
+  const response = await authenticatedFetch(tenantApiPath(tenantId, path), {
     headers: { Accept: 'application/json' },
   })
   if (!response.ok) {
@@ -22,8 +22,8 @@ async function request<T>(path: string): Promise<T> {
   return response.json()
 }
 
-export function getAssets() {
-  return request<ApiAsset[]>(tenantApiPath('intelligence/assets'))
+export function getAssets(tenantId: string) {
+  return request<ApiAsset[]>(tenantId, '/intelligence/assets')
 }
 
 export const assetsKey = '/intelligence/assets'
