@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -26,6 +27,11 @@ from app.services.investigation_orchestrator_service import (
     OrchestrationError,
 )
 from app.services.investigation_service import InvestigationService
+
+logger = logging.getLogger(__name__)
+
+# Matches OrchestrationError.code for a missing alert.
+ALERT_NOT_FOUND = "alert_not_found"
 
 
 router = APIRouter(
@@ -110,7 +116,12 @@ def list_investigations(
 @router.post(
     "/orchestrate/{alert_id}",
     dependencies=[
+        # Triggering the agent run.
         Depends(require_permission("ai.assistant.use")),
+        # The run writes investigations and evidence, so the caller must
+        # already hold that authority directly. The agent route must never
+        # grant more than the human invoking it could do by hand.
+        Depends(require_permission("forensics.manage")),
     ],
 )
 def orchestrate_investigation(
@@ -126,6 +137,12 @@ def orchestrate_investigation(
     This is intentionally an explicit synchronous endpoint. It should not be
     called from alert ingestion until orchestration is moved to a background
     worker or durable queue.
+
+    Error mapping:
+      - alert missing for this tenant -> 404
+      - any other orchestration failure -> 500 with run identifiers only;
+        the underlying message is logged, never returned, because node
+        errors can contain database error text.
     """
     try:
         result = orchestrator.run_for_alert(
@@ -133,9 +150,32 @@ def orchestrate_investigation(
             alert_id=alert_id,
         )
     except OrchestrationError as exc:
+        if getattr(exc, "code", None) == ALERT_NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Alert not found.",
+            ) from exc
+
+        logger.error(
+            "Orchestration failed: tenant_id=%s alert_id=%s failed_step=%s "
+            "investigation_id=%s run_id=%s: %s",
+            membership.tenant_id,
+            alert_id,
+            getattr(exc, "failed_step", None),
+            getattr(exc, "investigation_id", None),
+            getattr(exc, "run_id", None),
+            exc,
+        )
+
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "orchestration_failed",
+                "failed_step": getattr(exc, "failed_step", None),
+                "investigation_id": getattr(exc, "investigation_id", None),
+                "run_id": getattr(exc, "run_id", None),
+                "completed_steps": getattr(exc, "completed_steps", []),
+            },
         ) from exc
 
     return {

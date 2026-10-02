@@ -1,7 +1,7 @@
 """
 Security-boundary test suite (Recommendation #6).
 
-These tests exercise the three authorization seams that live in
+These tests exercise the authorization seams that live in
 ``app.api.deps`` *directly* — no live Keycloak server and no Postgres
 connection. The dependency callables are invoked with fake users /
 memberships, and their data-access collaborators (``MembershipRepo``,
@@ -19,11 +19,11 @@ Coverage:
      rejected with 403; a member with it (or the ``platform.all`` super
      permission) passes.
 
-3. AI-cannot-execute -> documented skip
-     The product has no AI/agent execution layer yet, so there is no seam to
-     assert against. The test is scaffolded and skipped so the intent is
-     recorded and the suite fails loudly the day someone wires an AI actor in
-     without a guard. See the test body for the contract it must satisfy.
+3. AI-cannot-execute -> covered in ``tests/test_agent_authority_boundary.py``
+     The agent layer now exists. Its authority boundary (agent import
+     allowlist, dynamic-import ban, the human auth chain on the orchestrate
+     route, and the write-scope check that a real run changes only the
+     investigations and evidence tables) is asserted there, not here.
 """
 
 from __future__ import annotations
@@ -269,32 +269,3 @@ class TestIdentityBoundary:
 
         assert exc_info.value.status_code == HTTP_401_UNAUTHORIZED
         assert exc_info.value.detail == "not_authenticated"
-
-
-# ======================================================================
-# 4. AI-CANNOT-EXECUTE  (scaffolded, skipped until an AI layer exists)
-# ======================================================================
-
-@pytest.mark.skip(
-    reason=(
-        "No AI/agent execution layer exists yet, so there is no seam to "
-        "assert against. When one is added, an AI actor MUST route through "
-        "the same authorization dependencies as a human — it must NOT be "
-        "able to invoke privileged/state-changing operations directly. "
-        "Un-skip and implement the contract described in the test body."
-    )
-)
-def test_ai_actor_cannot_execute_privileged_operations():
-    """
-    Contract to enforce once an AI layer lands:
-
-    * An AI-initiated action carries an actor identity (service principal or
-      the delegating user) and MUST pass through ``get_active_membership`` +
-      ``require_permission`` exactly like a human request.
-    * An AI actor with NO membership in the target tenant is rejected 403.
-    * An AI actor without the required permission is rejected 403 — there is
-      no "AI bypass" path around ``require_permission``.
-    * Any tool/function the AI can call that mutates state must be guarded by
-      a permission dependency, not merely reachable because the AI is trusted.
-    """
-    raise AssertionError("AI execution boundary not yet implemented")

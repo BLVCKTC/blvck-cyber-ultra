@@ -1,9 +1,9 @@
 from __future__ import annotations
 from datetime import datetime
 from uuid import UUID, uuid4
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func, text
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func, text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 class Investigation(Base):

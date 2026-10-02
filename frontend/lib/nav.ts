@@ -67,7 +67,7 @@ export function buildNavSections(
           title: 'Detection Rules',
           href: `${base}/detection-rules`,
           icon: Crosshair,
-          permission: 'detection_rules.view',
+          permission: 'detections.view',
         },
         {
           title: 'Alerts',

@@ -9,22 +9,23 @@ from app.agents.agent_nodes import (
     make_load_context_node,
     make_mitre_node,
     make_ot_context_node,
+    make_planner_node,
     make_query_node,
     make_reporting_node,
     make_threat_intel_node,
     route_after_load_context,
     route_next_step,
 )
-from app.agents.state import InvestigationState
+from app.agents.state import InvestigationState, _DEFAULT_PLAN
 
 
-_AGENT_NODE_NAMES = (
-    "query",
-    "evidence",
-    "mitre",
-    "threat_intel",
-    "ot_context",
-)
+_AGENT_FACTORIES = {
+    "query": make_query_node,
+    "evidence": make_evidence_node,
+    "mitre": make_mitre_node,
+    "threat_intel": make_threat_intel_node,
+    "ot_context": make_ot_context_node,
+}
 
 
 def build_investigation_graph(db: Session):
@@ -37,19 +38,28 @@ def build_investigation_graph(db: Session):
           |
         load_context
           |
-          +--> error --------> END
-          |
-          +--> planned agent
-                    |
-                    +--> next planned agent
-                    |
-                    +--> reporting
-                                  |
-                                  +--> END
+          +--> planner
+                  |
+                  +--> selected agent
+                  |        |
+                  |        +--> next selected agent
+                  |        |
+                  |        +--> reporting
+                  |
+                  +--> reporting
+                  |
+                  +--> error
+                           |
+                           +--> END
 
-    The plan is currently fixed by load_context, but routing already uses the
-    plan. That means replacing the hardcoded planner later does not require
-    changing the graph wiring.
+    load_context initializes the investigation execution state and provides
+    the default plan as a fallback.
+
+    The deterministic planner then narrows that plan based on the alert's
+    linked records. Subsequent routing uses the planner-selected state["plan"].
+
+    Agent node registration is sourced from _AGENT_FACTORIES so the registry
+    remains the single wiring point for investigation agents.
     """
 
     graph = StateGraph(InvestigationState)
@@ -59,29 +69,15 @@ def build_investigation_graph(db: Session):
         make_load_context_node(db),
     )
 
-    graph.add_node(
-        "query",
-        make_query_node(db),
-    )
+    for name, factory in _AGENT_FACTORIES.items():
+        graph.add_node(
+            name,
+            factory(db),
+        )
 
     graph.add_node(
-        "evidence",
-        make_evidence_node(db),
-    )
-
-    graph.add_node(
-        "mitre",
-        make_mitre_node(db),
-    )
-
-    graph.add_node(
-        "threat_intel",
-        make_threat_intel_node(db),
-    )
-
-    graph.add_node(
-        "ot_context",
-        make_ot_context_node(db),
+        "planner",
+        make_planner_node(db),
     )
 
     graph.add_node(
@@ -94,42 +90,47 @@ def build_investigation_graph(db: Session):
         make_error_node(),
     )
 
-    graph.add_edge(START, "load_context")
-
-    # Routing after context loading.
-    graph.add_conditional_edges(
-        "load_context",
-        route_after_load_context,
-        {
-            "query": "query",
-            "evidence": "evidence",
-            "mitre": "mitre",
-            "threat_intel": "threat_intel",
-            "ot_context": "ot_context",
-            "reporting": "reporting",
-            "error": "error",
-        },
-    )
-
-    # Every agent routes to the next unfinished planned step.
     route_targets = {
-        "query": "query",
-        "evidence": "evidence",
-        "mitre": "mitre",
-        "threat_intel": "threat_intel",
-        "ot_context": "ot_context",
+        **{name: name for name in _AGENT_FACTORIES},
         "reporting": "reporting",
         "error": "error",
     }
 
-    for node_name in _AGENT_NODE_NAMES:
+    graph.add_edge(
+        START,
+        "load_context",
+    )
+
+    graph.add_conditional_edges(
+        "load_context",
+        route_after_load_context,
+        {
+            "planner": "planner",
+            "error": "error",
+        },
+    )
+
+    graph.add_conditional_edges(
+        "planner",
+        route_next_step,
+        route_targets,
+    )
+
+    for name in _AGENT_FACTORIES:
         graph.add_conditional_edges(
-            node_name,
+            name,
             route_next_step,
             route_targets,
         )
 
-    graph.add_edge("reporting", END)
-    graph.add_edge("error", END)
+    graph.add_edge(
+        "reporting",
+        END,
+    )
+
+    graph.add_edge(
+        "error",
+        END,
+    )
 
     return graph.compile()

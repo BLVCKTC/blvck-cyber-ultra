@@ -23,7 +23,7 @@ class DashboardRepo:
         event_ids = self.db.scalars(select(SecurityEvent.mitre_technique_id).where(SecurityEvent.tenant_id == self.tenant_id, SecurityEvent.event_time >= since, SecurityEvent.mitre_technique_id.is_not(None))).all()
         rules = {x for row in rule_ids for x in (row or [])}; events = set(event_ids)
         total = len(rules | events); covered = len(rules & events)
-        return open_alerts, incidents, round(covered / total * 100, 2) if total else 0, 0
+        return open_alerts, incidents, round(covered / total * 100, 2) if total else 0, None
 
     def volume(self, since: datetime, granularity: str):
         bucket = func.date_trunc(granularity, Alert.updated_at).label("bucket")

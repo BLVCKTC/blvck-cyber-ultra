@@ -1,60 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { API_URL, authenticatedFetch } from '@/lib/api/client'
+import { authenticatedFetch, tenantApiPath } from '@/lib/api/client'
 
 type KpiCardsProps = {
   tenantId: string
 }
 
-type KpiTrend = 'up' | 'down' | 'flat'
-
-type Kpi = {
-  key: string
-  label: string
-  value: string | number
-  delta?: string
-  sub?: string
-  trend: KpiTrend
-  goodWhenUp?: boolean
+type DashboardKpis = {
+  openAlerts: number
+  activeIncidents: number
+  mitreCoverage: number
+  meanTimeToTriage: number | null
 }
 
 type KpiResponse = {
-  openAlerts?: {
-    value: number
-    delta?: number
-    trend?: KpiTrend
-  }
-  activeIncidents?: {
-    value: number
-    unassigned?: number
-    delta?: number
-    trend?: KpiTrend
-  }
-  mitreCoverage?: {
-    covered: number
-    total: number
-  }
-  meanTimeToTriage?: {
-    value: number
-    unit?: string
-    delta?: number
-    trend?: KpiTrend
-  }
+  data: DashboardKpis
 }
 
-function formatDelta(delta?: number, suffix = '') {
-  if (delta === undefined || delta === null) return '—'
+function formatDuration(minutes: number | null) {
+  if (minutes === null) {
+    return 'Unavailable'
+  }
 
-  const prefix = delta > 0 ? '+' : ''
-
-  return `${prefix}${delta}${suffix}`
-}
-
-function formatDuration(minutes: number) {
   if (minutes < 60) {
     return `${Math.round(minutes)}m`
   }
@@ -70,7 +40,7 @@ function formatDuration(minutes: number) {
 }
 
 export function KpiCards({ tenantId }: KpiCardsProps) {
-  const [data, setData] = useState<KpiResponse | null>(null)
+  const [data, setData] = useState<DashboardKpis | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -81,7 +51,7 @@ export function KpiCards({ tenantId }: KpiCardsProps) {
         setLoading(true)
 
         const response = await authenticatedFetch(
-          `${API_URL}/v1/tenants/${tenantId}/dashboard/kpis`,
+          tenantApiPath(tenantId, 'dashboard/kpis'),
           {
             signal: controller.signal,
             cache: 'no-store',
@@ -92,10 +62,14 @@ export function KpiCards({ tenantId }: KpiCardsProps) {
           throw new Error('Failed to load dashboard KPIs')
         }
 
-        const result = await response.json()
-        setData(result.data ?? result)
+        const result: KpiResponse = await response.json()
+
+        setData(result.data)
       } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') return
+        if (error instanceof Error && error.name === 'AbortError') {
+          return
+        }
+
         console.error(error)
       } finally {
         setLoading(false)
@@ -107,104 +81,61 @@ export function KpiCards({ tenantId }: KpiCardsProps) {
     return () => controller.abort()
   }, [tenantId])
 
-  const coverage = data?.mitreCoverage
-    ? Math.round(
-        (data.mitreCoverage.covered / Math.max(data.mitreCoverage.total, 1)) *
-          100,
-      )
-    : 0
+  const coverage = data?.mitreCoverage ?? null
 
-  const kpis: Kpi[] = [
+  const kpis = [
     {
       key: 'open-alerts',
       label: 'Open alerts',
-      value: data?.openAlerts?.value ?? 0,
-      delta: formatDelta(data?.openAlerts?.delta),
-      sub: 'vs. same time yesterday',
-      trend: data?.openAlerts?.trend ?? 'flat',
-      goodWhenUp: false,
+      value: data?.openAlerts ?? 0,
+      sub: 'Currently open',
     },
     {
       key: 'active-incidents',
       label: 'Active incidents',
-      value: data?.activeIncidents?.value ?? 0,
-      delta: formatDelta(data?.activeIncidents?.delta),
-      sub: `${data?.activeIncidents?.unassigned ?? 0} unassigned`,
-      trend: data?.activeIncidents?.trend ?? 'flat',
-      goodWhenUp: false,
+      value: data?.activeIncidents ?? 0,
+      sub: 'Currently active',
     },
     {
       key: 'mitre-coverage',
       label: 'MITRE coverage',
-      value: `${coverage}%`,
-      delta: 'Snapshot',
-      sub: data?.mitreCoverage
-        ? `${data.mitreCoverage.covered} of ${data.mitreCoverage.total} techniques`
-        : 'Coverage unavailable',
-      trend: 'flat',
+      value: coverage !== null ? `${Math.round(coverage)}%` : '—',
+      sub: 'Coverage snapshot',
     },
     {
       key: 'mean-time-to-triage',
       label: 'Mean time to triage',
-      value: data?.meanTimeToTriage
-        ? formatDuration(data.meanTimeToTriage.value)
-        : '—',
-      delta: formatDelta(data?.meanTimeToTriage?.delta, 'm'),
-      sub: 'vs. trailing 7-day average',
-      trend: data?.meanTimeToTriage?.trend ?? 'flat',
-      goodWhenUp: false,
+      value: formatDuration(data?.meanTimeToTriage ?? null),
+      sub:
+        data?.meanTimeToTriage === null
+          ? 'Not currently calculated'
+          : 'Measured triage duration',
     },
   ]
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {kpis.map((kpi) => {
-        const positive =
-          kpi.trend === 'flat'
-            ? null
-            : (kpi.trend === 'up') === Boolean(kpi.goodWhenUp)
+      {kpis.map((kpi) => (
+        <div
+          key={kpi.key}
+          className="rounded-lg border border-border bg-card p-4"
+        >
+          <p className="text-sm text-muted-foreground">{kpi.label}</p>
 
-        const TrendIcon =
-          kpi.trend === 'up'
-            ? ArrowUpRight
-            : kpi.trend === 'down'
-              ? ArrowDownRight
-              : Minus
-
-        return (
-          <div
-            key={kpi.key}
-            className="rounded-lg border border-border bg-card p-4"
-          >
-            <p className="text-sm text-muted-foreground">{kpi.label}</p>
-
-            <div className="mt-2 flex items-baseline gap-2">
-              <span
-                className={cn(
-                  'text-3xl font-semibold tracking-tight text-foreground',
-                  loading && 'animate-pulse text-muted',
-                )}
-              >
-                {loading ? '—' : kpi.value}
-              </span>
-
-              <span
-                className={cn(
-                  'inline-flex items-center gap-0.5 text-xs font-medium tabular',
-                  positive === null && 'text-muted-foreground',
-                  positive === true && 'text-success',
-                  positive === false && 'text-high',
-                )}
-              >
-                <TrendIcon className="h-3.5 w-3.5" />
-                {kpi.delta}
-              </span>
-            </div>
-
-            <p className="mt-1 text-xs text-muted-foreground">{kpi.sub}</p>
+          <div className="mt-2">
+            <span
+              className={cn(
+                'text-3xl font-semibold tracking-tight text-foreground',
+                loading && 'animate-pulse text-muted',
+              )}
+            >
+              {loading ? '—' : kpi.value}
+            </span>
           </div>
-        )
-      })}
+
+          <p className="mt-1 text-xs text-muted-foreground">{kpi.sub}</p>
+        </div>
+      ))}
     </div>
   )
 }

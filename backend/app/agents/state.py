@@ -35,3 +35,17 @@ class InvestigationState(TypedDict, total=False):
 
     # Name of the node that failed, when applicable.
     failed_step: str | None
+
+    # Machine-readable failure class, set only where callers must react
+    # differently (e.g. "alert_not_found" -> HTTP 404). It must be declared
+    # here: LangGraph drops state keys that are not part of the schema.
+    error_code: str | None
+
+
+_DEFAULT_PLAN: tuple[str, ...] = (
+    "query",
+    "evidence",
+    "mitre",
+    "threat_intel",
+    "ot_context",
+)

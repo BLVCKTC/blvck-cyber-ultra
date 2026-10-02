@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 from uuid import UUID
 from sqlalchemy.orm import Session
-from backend.app.db.models.canary import CanaryMatch
+from app.db.models.canary import CanaryMatch
 
 class CanaryMatchRepository:
     def __init__(self, db: Session) -> None:

@@ -4,7 +4,7 @@ class KPIData(BaseModel):
     openAlerts: int = 0
     activeIncidents: int = 0
     mitreCoverage: float = 0
-    meanTimeToTriage: float = 0
+    meanTimeToTriage: float | None = None
 
 class KPIResponse(BaseModel):
     data: KPIData
